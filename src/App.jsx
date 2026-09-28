@@ -1,29 +1,56 @@
-import React, { useState } from 'react';
-import Login from './components/Login';
-import Dashboard from './components/Dashboard';
+import { useState } from 'react';
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import Login from './components/Login/Login';
+import Dashboard from './components/Dashboard/Dashboard';
+import AuthenticatedLayout from './components/AuthenticatedLayout/AuthenticatedLayout';
+import StudentManagement from './components/StudentManagement/StudentManagement';
+import StudentDetail from './components/StudentManagement/StudentDetail/StudentDetail';
+import TeacherManagement from './components/TeacherManagement/TeacherManagement';
+import TeacherDetail from './components/TeacherManagement/TeacherDetail/TeacherDetail';
+import ClassManagement from './components/ClassManagement/ClassManagement';
+import ClassDetail from './components/ClassManagement/ClassDetail/ClassDetail';
+import Timetable from './components/Timetable/Timetable';
 
 const App = () => {
+  const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
 
   const handleLogin = (userData) => {
     setCurrentUser(userData);
     setIsAuthenticated(true);
+    navigate('/dashboard', { replace: true });
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
     setIsAuthenticated(false);
+    navigate('/', { replace: true });
   };
 
   return (
-    <>
-      {isAuthenticated ? (
-        <Dashboard onLogout={handleLogout} user={currentUser} />
-      ) : (
-        <Login onLogin={handleLogin} />
-      )}
-    </>
+    <Routes>
+      <Route
+        path="/"
+        element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login onLogin={handleLogin} />}
+      />
+      <Route
+        element={isAuthenticated ? <AuthenticatedLayout onLogout={handleLogout} /> : <Navigate to="/" replace />}
+      >
+        <Route path="/dashboard" element={<Dashboard user={currentUser} />} />
+        <Route path="/students" element={<StudentManagement />} />
+        <Route path="/students/new" element={<StudentDetail isCreateMode />} />
+        <Route path="/students/:studentId" element={<StudentDetail />} />
+        <Route path="/teachers" element={<TeacherManagement />} />
+        <Route path="/teachers/new" element={<TeacherDetail isCreateMode />} />
+        <Route path="/teachers/:recordId" element={<TeacherDetail />} />
+        <Route path="/classes" element={<ClassManagement />} />
+        <Route path="/classes/new" element={<ClassDetail isCreateMode />} />
+        <Route path="/classes/:recordId" element={<ClassDetail />} />
+        <Route path="/timetable" element={<Timetable />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 };
 

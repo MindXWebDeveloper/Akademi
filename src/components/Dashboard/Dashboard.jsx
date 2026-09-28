@@ -1,37 +1,9 @@
-import React from 'react';
 import {
-  UploadOutlined,
   UserOutlined,
-  VideoCameraOutlined,
   BarsOutlined,
   BellOutlined,
-  SearchOutlined,
-  LogoutOutlined,
 } from '@ant-design/icons';
-import { Layout, Menu, theme, Row, Col, Card, Statistic, Button, Table, Tag, Space, Input, message } from 'antd';
-
-const { Header, Content, Footer, Sider } = Layout;
-
-const menuItems = [
-  { key: '1', icon: <UserOutlined />, label: 'Tổng quan' },
-  { key: '2', icon: <UserOutlined />, label: 'Học sinh', children: [{ key: '2-1', label: 'Danh sách' }] },
-  { key: '3', icon: <UserOutlined />, label: 'Giáo viên', children: [{ key: '3-1', label: 'Danh sách' }] },
-  { key: '4', icon: <BarsOutlined />, label: 'Lớp học', children: [{ key: '4-1', label: 'Danh sách' }] },
-  { key: '5', icon: <BarsOutlined />, label: 'Thời khóa biểu' },
-  { key: '6', icon: <VideoCameraOutlined />, label: 'Hoạt động ngoài khóa' },
-  { key: '7', icon: <BellOutlined />, label: 'Thông báo' },
-  { key: '8', icon: <BarsOutlined />, label: 'Báo cáo' },
-  { key: '9', icon: <BarsOutlined />, label: 'Tài chính' },
-  { key: '10', icon: <UploadOutlined />, label: 'Tài sản' },
-  { key: '11', icon: <UserOutlined />, label: 'Thư viện' },
-  { key: '12', icon: <UserOutlined />, label: 'Cơ sở vật chất' },
-  { key: '13', icon: <UserOutlined />, label: 'Nhân sự' },
-  { key: '14', icon: <UserOutlined />, label: 'Học phí' },
-  { key: '15', icon: <BarsOutlined />, label: 'Chương trình học' },
-  { key: '16', icon: <BellOutlined />, label: 'Hỗ trợ' },
-  { key: '17', icon: <UserOutlined />, label: 'Cài đặt' },
-  { key: '18', icon: <LogoutOutlined />, label: 'Đăng xuất', danger: true },
-];
+import { Row, Col, Card, Statistic, Button, Table, Tag, Space } from 'antd';
 
 const chartData = [
   { month: 'Tháng 12', value: 1000 },
@@ -48,72 +20,11 @@ const activityData = [
   { key: 3, time: '05/06/2024 - 14:00', activity: 'Hoạt động ngoài khóa: Kỹ năng mềm', location: 'Sân trường', people: 'Đoàn trường', status: 'Đã lên kế hoạch' },
 ];
 
-const Dashboard = ({ onLogout, user }) => {
-  const {
-    token: { colorBgContainer },
-  } = theme.useToken();
-  const currentYear = new Date().getFullYear();
+const Dashboard = ({ user }) => {
   const displayName = user?.username ? (user.username === 'admin' ? 'Hiệu trưởng' : user.username) : 'Hiệu trưởng';
 
-  const handleMenuClick = ({ key }) => {
-    if (key === '18') {
-      message.info('Đã đăng xuất');
-      if (onLogout) {
-        onLogout();
-      }
-    }
-  };
-
   return (
-    <Layout style={{ minHeight: '100vh', width: '100%' }}>
-      <Sider
-        breakpoint="lg"
-        collapsedWidth="0"
-        theme="light"
-        onBreakpoint={broken => {
-          console.log(broken);
-        }}
-        onCollapse={(collapsed, type) => {
-          console.log(collapsed, type);
-        }}
-      >
-        <div style={{ padding: '16px', textAlign: 'center', fontSize: '20px', fontWeight: 'bold', color: '#1890ff', letterSpacing: '1px' }}>
-          🎓 Akademi
-        </div>
-        <Menu
-          mode="inline"
-          defaultSelectedKeys={['1']}
-          items={menuItems}
-          onClick={handleMenuClick}
-        />
-      </Sider>
-      <Layout style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        <Header style={{ padding: '0 24px', background: colorBgContainer, display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-          <Input
-            placeholder="Tìm kiếm thông tin học sinh, lớp học..."
-            prefix={<SearchOutlined style={{ color: '#aaa' }} />}
-            style={{ width: '320px', borderRadius: '6px' }}
-          />
-          <Space size="middle">
-            <BellOutlined style={{ fontSize: '18px', cursor: 'pointer', color: '#666' }} />
-            <UserOutlined style={{ fontSize: '18px', cursor: 'pointer', color: '#666' }} />
-            {onLogout && (
-              <Button
-                type="dashed"
-                danger
-                size="small"
-                icon={<LogoutOutlined />}
-                onClick={() => {
-                  message.info('Đã đăng xuất');
-                  onLogout();
-                }}
-              >
-                Đăng xuất
-              </Button>
-            )}
-          </Space>
-        </Header>
-        <Content style={{ flex: '1', overflow: 'auto', padding: '24px', background: '#f5f5f5' }}>
+    <>
           {/* Greeting Section */}
           <div style={{ marginBottom: '24px' }}>
             <h2 style={{ margin: '0 0 4px', color: '#262626' }}>Xin chào, {displayName}!</h2>
@@ -268,12 +179,7 @@ const Dashboard = ({ onLogout, user }) => {
               pagination={false}
             />
           </Card>
-        </Content>
-        <Footer style={{ textAlign: 'center', marginTop: 'auto', background: '#fff', color: '#8c8c8c' }}>
-          Akademi ©{currentYear} Hệ thống Quản lý Nhà trường Toàn diện
-        </Footer>
-      </Layout>
-    </Layout>
+    </>
   );
 };
 
