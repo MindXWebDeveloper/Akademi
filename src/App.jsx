@@ -8,6 +8,9 @@ import StudentDetail from './components/StudentManagement/StudentDetail/StudentD
 import StudentGrades from './components/StudentManagement/StudentGrades/StudentGrades';
 import StudentReportCard from './components/StudentManagement/StudentReportCard/StudentReportCard';
 import StudentTranscript from './components/StudentManagement/StudentTranscript/StudentTranscript';
+import ExtracurricularActivities from './components/ExtracurricularActivities/ExtracurricularActivities';
+import ActivityDetail from './components/ExtracurricularActivities/ActivityDetail';
+import LibraryManagement from './components/Library/LibraryManagement';
 import TeacherManagement from './components/TeacherManagement/TeacherManagement';
 import TeacherDetail from './components/TeacherManagement/TeacherDetail/TeacherDetail';
 import ClassManagement from './components/ClassManagement/ClassManagement';
@@ -54,6 +57,10 @@ const App = () => {
         <Route path="/classes/new" element={<ClassDetail isCreateMode />} />
         <Route path="/classes/:recordId" element={<ClassDetail />} />
         <Route path="/timetable" element={<Timetable />} />
+        <Route path="/activities" element={<ExtracurricularActivities />} />
+        <Route path="/activities/new" element={<ActivityDetail isCreateMode />} />
+        <Route path="/activities/:activityId" element={<ActivityDetail />} />
+        <Route path="/library" element={<LibraryManagement />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

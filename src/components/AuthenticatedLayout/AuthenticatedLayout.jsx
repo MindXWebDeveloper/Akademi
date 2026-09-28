@@ -41,8 +41,10 @@ const AuthenticatedLayout = ({ onLogout }) => {
   const isTeacherRoute = location.pathname.startsWith('/teachers');
   const isClassRoute = location.pathname.startsWith('/classes');
   const isTimetableRoute = location.pathname.startsWith('/timetable');
+  const isActivityRoute = location.pathname.startsWith('/activities');
+  const isLibraryRoute = location.pathname.startsWith('/library');
   const activeGroupKey = isStudentRoute ? '2' : isTeacherRoute ? '3' : isClassRoute ? '4' : null;
-  const activeItemKey = isStudentRoute ? '2-1' : isTeacherRoute ? '3-1' : isClassRoute ? '4-1' : isTimetableRoute ? '5' : '1';
+  const activeItemKey = isStudentRoute ? '2-1' : isTeacherRoute ? '3-1' : isClassRoute ? '4-1' : isTimetableRoute ? '5' : isActivityRoute ? '6' : isLibraryRoute ? '11' : '1';
   const [isMobile, setIsMobile] = useState(false);
   const [openKeys, setOpenKeys] = useState([]);
   const {
@@ -75,6 +77,12 @@ const AuthenticatedLayout = ({ onLogout }) => {
       closeMobileSubmenu();
     } else if (key === '5') {
       navigate('/timetable');
+      closeMobileSubmenu();
+    } else if (key === '6') {
+      navigate('/activities');
+      closeMobileSubmenu();
+    } else if (key === '11') {
+      navigate('/library');
       closeMobileSubmenu();
     }
   };
