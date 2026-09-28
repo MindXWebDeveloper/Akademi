@@ -5,6 +5,9 @@ import Dashboard from './components/Dashboard/Dashboard';
 import AuthenticatedLayout from './components/AuthenticatedLayout/AuthenticatedLayout';
 import StudentManagement from './components/StudentManagement/StudentManagement';
 import StudentDetail from './components/StudentManagement/StudentDetail/StudentDetail';
+import StudentGrades from './components/StudentManagement/StudentGrades/StudentGrades';
+import StudentReportCard from './components/StudentManagement/StudentReportCard/StudentReportCard';
+import StudentTranscript from './components/StudentManagement/StudentTranscript/StudentTranscript';
 import TeacherManagement from './components/TeacherManagement/TeacherManagement';
 import TeacherDetail from './components/TeacherManagement/TeacherDetail/TeacherDetail';
 import ClassManagement from './components/ClassManagement/ClassManagement';
@@ -40,6 +43,9 @@ const App = () => {
         <Route path="/dashboard" element={<Dashboard user={currentUser} />} />
         <Route path="/students" element={<StudentManagement />} />
         <Route path="/students/new" element={<StudentDetail isCreateMode />} />
+        <Route path="/students/:studentId/grades" element={<StudentGrades />} />
+        <Route path="/students/:studentId/report-card" element={<StudentReportCard />} />
+        <Route path="/students/:studentId/transcript" element={<StudentTranscript />} />
         <Route path="/students/:studentId" element={<StudentDetail />} />
         <Route path="/teachers" element={<TeacherManagement />} />
         <Route path="/teachers/new" element={<TeacherDetail isCreateMode />} />

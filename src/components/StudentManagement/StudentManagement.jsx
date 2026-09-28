@@ -154,11 +154,16 @@ const StudentManagement = () => {
                   {
                     title: 'Thao tác',
                     key: 'action',
-                    width: 120,
+                    width: 190,
                     render: (_, student) => (
-                      <Link className="ant-btn ant-btn-link" to={`/students/${student.id}`}>
-                        Chi tiết
-                      </Link>
+                      <Space size="small">
+                        <Link className="ant-btn ant-btn-link" to={`/students/${student.id}`}>
+                          Chi tiết
+                        </Link>
+                        <Link className="ant-btn ant-btn-link" to={`/students/${student.id}/grades`}>
+                          Nhập điểm
+                        </Link>
+                      </Space>
                     ),
                   },
                 ]}

@@ -13,13 +13,14 @@ import {
   Typography,
   message,
 } from 'antd';
-import { ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, ReadOutlined, SaveOutlined } from '@ant-design/icons';
 import {
   createStudent,
   generateStudentId,
   getStudentById,
   saveStudent,
 } from '../../../data/students';
+import StudentGradeSummary from '../StudentGradeSummary';
 
 const genderOptions = [
   { value: 'Nam', label: 'Nam' },
@@ -87,14 +88,26 @@ const StudentDetail = ({ isCreateMode = false }) => {
       </Button>
 
       <div style={{ marginBottom: 24 }}>
-        <Typography.Title level={3} style={{ margin: '0 0 4px' }}>
-          {isCreateMode ? 'Thêm học sinh' : 'Hồ sơ học sinh'}
-        </Typography.Title>
-        <Typography.Text type="secondary">
-          {isCreateMode
-            ? 'Nhập thông tin cá nhân, liên hệ và lớp học cho học sinh mới.'
-            : 'Xem và cập nhật thông tin cá nhân, liên hệ và lớp học.'}
-        </Typography.Text>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <Typography.Title level={3} style={{ margin: '0 0 4px' }}>
+              {isCreateMode ? 'Thêm học sinh' : 'Hồ sơ học sinh'}
+            </Typography.Title>
+            <Typography.Text type="secondary">
+              {isCreateMode
+                ? 'Nhập thông tin cá nhân, liên hệ và lớp học cho học sinh mới.'
+                : 'Xem và cập nhật thông tin cá nhân, liên hệ và lớp học.'}
+            </Typography.Text>
+          </div>
+          {!isCreateMode && (
+            <Button
+              icon={<ReadOutlined />}
+              onClick={() => navigate(`/students/${studentId}/transcript`)}
+            >
+              Xem học bạ
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card>
@@ -217,6 +230,7 @@ const StudentDetail = ({ isCreateMode = false }) => {
           </Space>
         </Form>
       </Card>
+      {!isCreateMode && <StudentGradeSummary studentId={studentId} />}
     </div>
   );
 };

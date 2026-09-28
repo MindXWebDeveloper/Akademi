@@ -43,41 +43,60 @@ const AuthenticatedLayout = ({ onLogout }) => {
   const isTimetableRoute = location.pathname.startsWith('/timetable');
   const activeGroupKey = isStudentRoute ? '2' : isTeacherRoute ? '3' : isClassRoute ? '4' : null;
   const activeItemKey = isStudentRoute ? '2-1' : isTeacherRoute ? '3-1' : isClassRoute ? '4-1' : isTimetableRoute ? '5' : '1';
+  const [isMobile, setIsMobile] = useState(false);
   const [openKeys, setOpenKeys] = useState([]);
   const {
     token: { colorBgContainer },
   } = theme.useToken();
 
   const handleMenuClick = ({ key }) => {
+    const closeMobileSubmenu = () => {
+      if (isMobile) setOpenKeys([]);
+    };
+
     if (key === '18') {
       message.info('Đã đăng xuất');
+      closeMobileSubmenu();
       onLogout?.();
       return;
     }
 
     if (key === '1') {
       navigate('/dashboard');
+      closeMobileSubmenu();
     } else if (key === '2-1') {
       navigate('/students');
+      closeMobileSubmenu();
     } else if (key === '3-1') {
       navigate('/teachers');
+      closeMobileSubmenu();
     } else if (key === '4-1') {
       navigate('/classes');
+      closeMobileSubmenu();
     } else if (key === '5') {
       navigate('/timetable');
+      closeMobileSubmenu();
     }
   };
 
   return (
     <Layout style={{ minHeight: '100vh', width: '100%' }}>
-      <Sider breakpoint="lg" collapsedWidth="0" theme="light">
+      <Sider
+        breakpoint="lg"
+        collapsedWidth="0"
+        theme="light"
+        onBreakpoint={(broken) => {
+          setIsMobile(broken);
+          if (broken) setOpenKeys([]);
+        }}
+      >
         <div style={{ padding: '16px', textAlign: 'center', fontSize: '20px', fontWeight: 'bold', color: '#1890ff', letterSpacing: '1px' }}>
           🎓 Akademi
         </div>
         <Menu
           mode="inline"
           selectedKeys={[activeItemKey]}
-          openKeys={activeGroupKey ? [...new Set([...openKeys, activeGroupKey])] : openKeys}
+          openKeys={isMobile ? openKeys : activeGroupKey ? [...new Set([...openKeys, activeGroupKey])] : openKeys}
           onOpenChange={setOpenKeys}
           items={menuItems}
           onClick={handleMenuClick}
