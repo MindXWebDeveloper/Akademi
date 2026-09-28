@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   Alert,
   Button,
@@ -31,6 +31,13 @@ const genderOptions = [
 const StudentDetail = ({ isCreateMode = false }) => {
   const { studentId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const requestedReturnTo = location.state?.returnTo;
+  const returnTo = typeof requestedReturnTo === 'string'
+    && (requestedReturnTo === '/students' || requestedReturnTo.startsWith('/students?'))
+    ? requestedReturnTo
+    : '/students';
+  const goToList = () => navigate(returnTo, { replace: true });
   const [form] = Form.useForm();
   const student = isCreateMode ? null : getStudentById(studentId);
 
@@ -59,7 +66,7 @@ const StudentDetail = ({ isCreateMode = false }) => {
     }
 
     message.success(isCreateMode ? 'Đã thêm học sinh.' : 'Đã lưu thông tin học sinh.');
-    navigate('/students');
+    goToList();
   };
 
   if (!student && !isCreateMode) {
@@ -70,7 +77,7 @@ const StudentDetail = ({ isCreateMode = false }) => {
           showIcon
           message="Không tìm thấy học sinh"
           description={`Mã học sinh ${studentId} không tồn tại trong danh sách.`}
-          action={<Button onClick={() => navigate('/students')}>Về danh sách</Button>}
+          action={<Button onClick={goToList}>Về danh sách</Button>}
         />
       </Card>
     );
@@ -81,33 +88,31 @@ const StudentDetail = ({ isCreateMode = false }) => {
       <Button
         type="text"
         icon={<ArrowLeftOutlined />}
-        onClick={() => navigate('/students')}
+        onClick={goToList}
         style={{ paddingInline: 0, marginBottom: 16 }}
       >
         Danh sách học sinh
       </Button>
 
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
-          <div>
-            <Typography.Title level={3} style={{ margin: '0 0 4px' }}>
-              {isCreateMode ? 'Thêm học sinh' : 'Hồ sơ học sinh'}
-            </Typography.Title>
-            <Typography.Text type="secondary">
-              {isCreateMode
-                ? 'Nhập thông tin cá nhân, liên hệ và lớp học cho học sinh mới.'
-                : 'Xem và cập nhật thông tin cá nhân, liên hệ và lớp học.'}
-            </Typography.Text>
-          </div>
-          {!isCreateMode && (
-            <Button
-              icon={<ReadOutlined />}
-              onClick={() => navigate(`/students/${studentId}/transcript`)}
-            >
-              Xem học bạ
-            </Button>
-          )}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
+        <div>
+          <Typography.Title level={3} style={{ margin: '0 0 4px' }}>
+            {isCreateMode ? 'Thêm học sinh' : 'Hồ sơ học sinh'}
+          </Typography.Title>
+          <Typography.Text type="secondary">
+            {isCreateMode
+              ? 'Nhập thông tin cá nhân, liên hệ và lớp học cho học sinh mới.'
+              : 'Xem và cập nhật thông tin cá nhân, liên hệ và lớp học.'}
+          </Typography.Text>
         </div>
+        {!isCreateMode && (
+          <Button
+            icon={<ReadOutlined />}
+            onClick={() => navigate(`/students/${studentId}/transcript`, { state: location.state })}
+          >
+            Xem học bạ
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -224,7 +229,7 @@ const StudentDetail = ({ isCreateMode = false }) => {
             <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
               {isCreateMode ? 'Thêm học sinh' : 'Lưu thay đổi'}
             </Button>
-            <Button onClick={() => navigate('/students')}>
+            <Button onClick={goToList}>
               Hủy
             </Button>
           </Space>

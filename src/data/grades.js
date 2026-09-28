@@ -71,30 +71,32 @@ export const saveGradeRecord = (studentId, subject, schoolYear, semester, record
 };
 
 export const getStudentTranscript = (studentId, schoolYear) => {
-  const store = readTranscriptStore();
-  return store[makeTranscriptKey(studentId, schoolYear)] ?? {
-    academicLevel: '',
-    conduct: '',
-    homeroomComment: '',
-  };
+  try {
+    const store = JSON.parse(localStorage.getItem(transcriptStorageKey)) ?? {};
+    return store[makeTranscriptKey(studentId, schoolYear)] ?? {
+      academicLevel: '',
+      conduct: '',
+      homeroomComment: '',
+    };
+  } catch {
+    return { academicLevel: '', conduct: '', homeroomComment: '' };
+  }
 };
 
 export const saveStudentTranscript = (studentId, schoolYear, transcript) => {
-  const store = readTranscriptStore();
+  let store = {};
+  try {
+    store = JSON.parse(localStorage.getItem(transcriptStorageKey)) ?? {};
+  } catch {
+    store = {};
+  }
+
   store[makeTranscriptKey(studentId, schoolYear)] = transcript;
   try {
     localStorage.setItem(transcriptStorageKey, JSON.stringify(store));
     return true;
   } catch {
     return false;
-  }
-};
-
-const readTranscriptStore = () => {
-  try {
-    return JSON.parse(localStorage.getItem(transcriptStorageKey)) ?? {};
-  } catch {
-    return {};
   }
 };
 

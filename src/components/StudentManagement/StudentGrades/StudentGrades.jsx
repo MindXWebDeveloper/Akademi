@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   Alert,
   Button,
@@ -59,6 +59,13 @@ const resizeScores = (scores, count) => (
 const StudentGrades = () => {
   const { studentId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const requestedReturnTo = location.state?.returnTo;
+  const returnTo = typeof requestedReturnTo === 'string'
+    && (requestedReturnTo === '/students' || requestedReturnTo.startsWith('/students?'))
+    ? requestedReturnTo
+    : '/students';
+  const goToList = () => navigate(returnTo, { replace: true });
   const student = getStudents().find((item) => item.id === studentId);
   const subjects = [...new Set(getRecords('teachers').map((teacher) => teacher.subject).filter(Boolean))].sort();
   const [subject, setSubject] = useState(subjects[0] ?? '');
@@ -182,7 +189,7 @@ const StudentGrades = () => {
           showIcon
           message="Không tìm thấy học sinh"
           description={`Mã học sinh ${studentId} không tồn tại trong danh sách.`}
-          action={<Button onClick={() => navigate('/students')}>Về danh sách</Button>}
+          action={<Button onClick={goToList}>Về danh sách</Button>}
         />
       </Card>
     );
@@ -193,7 +200,7 @@ const StudentGrades = () => {
       <Button
         type="text"
         icon={<ArrowLeftOutlined />}
-        onClick={() => navigate('/students')}
+        onClick={goToList}
         style={{ paddingInline: 0, marginBottom: 16 }}
       >
         Danh sách học sinh

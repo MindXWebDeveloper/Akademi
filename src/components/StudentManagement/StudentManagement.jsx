@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Alert,
   Button,
@@ -34,35 +34,51 @@ const columns = [
 
 const StudentManagement = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [form] = Form.useForm();
-  const [matchedStudents, setMatchedStudents] = useState(null);
   const [validationMessage, setValidationMessage] = useState('');
+  const searchCriteria = {
+    studentId: searchParams.get('studentId') ?? '',
+    studentName: searchParams.get('studentName') ?? '',
+    className: searchParams.get('className') ?? '',
+  };
+  const normalizedStudentId = searchCriteria.studentId.trim().toLocaleLowerCase('vi');
+  const normalizedStudentName = searchCriteria.studentName.trim().toLocaleLowerCase('vi');
+  const hasSearchCriteria = Boolean(normalizedStudentId || normalizedStudentName || searchCriteria.className);
+  const matchedStudents = hasSearchCriteria
+    ? getStudents().filter((student) => (
+      (!normalizedStudentId || student.id.toLocaleLowerCase('vi').includes(normalizedStudentId))
+      && (!normalizedStudentName || student.name.toLocaleLowerCase('vi').includes(normalizedStudentName))
+      && (!searchCriteria.className || student.className === searchCriteria.className)
+    ))
+    : null;
   const classOptions = [...new Set(getStudents().map((student) => student.className))]
     .sort()
     .map((className) => ({ value: className, label: className }));
 
   const handleSearch = (values) => {
-    const studentId = values.studentId?.trim().toLocaleLowerCase('vi');
-    const studentName = values.studentName?.trim().toLocaleLowerCase('vi');
+    const studentId = values.studentId?.trim();
+    const studentName = values.studentName?.trim();
     const className = values.className;
 
     if (!studentId && !studentName && !className) {
-      setMatchedStudents(null);
+      setSearchParams({}, { replace: true });
       setValidationMessage('Nhập mã học sinh, tên học sinh hoặc chọn lớp học để xem danh sách.');
       return;
     }
 
     setValidationMessage('');
-    setMatchedStudents(getStudents().filter((student) => (
-      (!studentId || student.id.toLocaleLowerCase('vi').includes(studentId))
-      && (!studentName || student.name.toLocaleLowerCase('vi').includes(studentName))
-      && (!className || student.className === className)
-    )));
+    const nextParams = new URLSearchParams();
+    if (studentId) nextParams.set('studentId', studentId);
+    if (studentName) nextParams.set('studentName', studentName);
+    if (className) nextParams.set('className', className);
+    setSearchParams(nextParams);
   };
 
   const handleReset = () => {
-    form.resetFields();
-    setMatchedStudents(null);
+    form.setFieldsValue({ studentId: '', studentName: '', className: undefined });
+    setSearchParams({}, { replace: true });
     setValidationMessage('');
   };
 
@@ -92,6 +108,7 @@ const StudentManagement = () => {
         <Form
           form={form}
           layout="vertical"
+          initialValues={searchCriteria}
           onFinish={handleSearch}
           onValuesChange={() => setValidationMessage('')}
         >
@@ -157,10 +174,18 @@ const StudentManagement = () => {
                     width: 190,
                     render: (_, student) => (
                       <Space size="small">
-                        <Link className="ant-btn ant-btn-link" to={`/students/${student.id}`}>
+                        <Link
+                          className="ant-btn ant-btn-link"
+                          to={`/students/${student.id}`}
+                          state={{ returnTo: `${location.pathname}${location.search}` }}
+                        >
                           Chi tiết
                         </Link>
-                        <Link className="ant-btn ant-btn-link" to={`/students/${student.id}/grades`}>
+                        <Link
+                          className="ant-btn ant-btn-link"
+                          to={`/students/${student.id}/grades`}
+                          state={{ returnTo: `${location.pathname}${location.search}` }}
+                        >
                           Nhập điểm
                         </Link>
                       </Space>

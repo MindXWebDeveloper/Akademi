@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useState } from 'react';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Alert,
   Button,
@@ -10,7 +10,6 @@ import {
   Input,
   Row,
   Select,
-  Space,
   Table,
   Typography,
   message,
@@ -29,8 +28,7 @@ import {
 
 const { TextArea } = Input;
 const schoolYears = ['2025-2026', '2026-2027', '2027-2028'];
-const academicLevels = ['Tốt', 'Khá', 'Đạt', 'Chưa đạt'];
-const conductLevels = ['Tốt', 'Khá', 'Đạt', 'Chưa đạt'];
+const evaluationLevels = ['Tốt', 'Khá', 'Đạt', 'Chưa đạt'];
 
 const formatScore = (score) => (
   score == null ? 'Chưa đủ điểm' : new Intl.NumberFormat('vi-VN', {
@@ -42,18 +40,15 @@ const formatScore = (score) => (
 const StudentTranscript = () => {
   const { studentId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const student = getStudents().find((item) => item.id === studentId);
   const subjects = [...new Set(getRecords('teachers').map((teacher) => teacher.subject).filter(Boolean))].sort();
-  const [schoolYear, setSchoolYear] = useState(() => {
-    const requestedYear = searchParams.get('year');
-    return schoolYears.includes(requestedYear) ? requestedYear : '2026-2027';
-  });
-  const [transcript, setTranscript] = useState(() => getStudentTranscript(studentId, schoolYear));
-
-  useEffect(() => {
-    setTranscript(getStudentTranscript(studentId, schoolYear));
-  }, [schoolYear, studentId]);
+  const requestedYear = searchParams.get('year');
+  const schoolYear = schoolYears.includes(requestedYear) ? requestedYear : '2026-2027';
+  const transcriptKey = `${studentId}|${schoolYear}`;
+  const [transcriptDrafts, setTranscriptDrafts] = useState({});
+  const transcript = transcriptDrafts[transcriptKey] ?? getStudentTranscript(studentId, schoolYear);
 
   const subjectRows = subjects.map((subject) => {
     const firstSemester = getSemesterAverage(
@@ -85,14 +80,16 @@ const StudentTranscript = () => {
   const annualAverage = getOverallAverage('annual');
 
   const handleYearChange = (value) => {
-    setSchoolYear(value);
     const nextParams = new URLSearchParams(searchParams);
     nextParams.set('year', value);
     setSearchParams(nextParams, { replace: true });
   };
 
   const updateTranscript = (field, value) => {
-    setTranscript((current) => ({ ...current, [field]: value }));
+    setTranscriptDrafts((current) => ({
+      ...current,
+      [transcriptKey]: { ...transcript, [field]: value },
+    }));
   };
 
   const handleSave = () => {
@@ -129,7 +126,7 @@ const StudentTranscript = () => {
       <Button
         type="text"
         icon={<ArrowLeftOutlined />}
-        onClick={() => navigate(`/students/${studentId}`)}
+        onClick={() => navigate(`/students/${studentId}`, { state: location.state })}
         style={{ paddingInline: 0, marginBottom: 16 }}
       >
         Hồ sơ học sinh
@@ -206,7 +203,7 @@ const StudentTranscript = () => {
               <Select
                 value={transcript.academicLevel || undefined}
                 onChange={(value) => updateTranscript('academicLevel', value)}
-                options={academicLevels.map((level) => ({ value: level, label: level }))}
+                options={evaluationLevels.map((level) => ({ value: level, label: level }))}
                 placeholder="Chọn xếp loại học lực"
                 style={{ width: '100%' }}
               />
@@ -218,7 +215,7 @@ const StudentTranscript = () => {
               <Select
                 value={transcript.conduct || undefined}
                 onChange={(value) => updateTranscript('conduct', value)}
-                options={conductLevels.map((level) => ({ value: level, label: level }))}
+                options={evaluationLevels.map((level) => ({ value: level, label: level }))}
                 placeholder="Chọn xếp loại hạnh kiểm"
                 style={{ width: '100%' }}
               />
