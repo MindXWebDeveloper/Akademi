@@ -20,6 +20,7 @@ import ClassDetail from './components/ClassManagement/ClassDetail/ClassDetail';
 import Timetable from './components/Timetable/Timetable';
 import RoleManagement from './components/RoleManagement/RoleManagement';
 import PersonalProfile from './components/PersonalProfile/PersonalProfile';
+import SubjectManagement from './components/SubjectManagement/SubjectManagement';
 
 const App = () => {
   const navigate = useNavigate();
@@ -58,6 +59,7 @@ const App = () => {
             : <Navigate to="/dashboard" replace />}
         />
         <Route path="/roles" element={<RoleManagement />} />
+        <Route path="/subjects" element={<SubjectManagement />} />
         <Route path="/students" element={<StudentManagement />} />
         <Route path="/students/new" element={<StudentDetail isCreateMode />} />
         <Route path="/students/:studentId/grades" element={<StudentGrades />} />

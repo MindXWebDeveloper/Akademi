@@ -8,6 +8,7 @@ export const resourceConfig = {
   roles: { name: 'Roles', keyField: 'roleKey' },
   users: { name: 'Users', keyField: 'accountKey' },
   classes: { name: 'Classes', keyField: 'classKey', urlKey: 'classesUrl' },
+  subjects: { name: 'Subjects', keyField: 'subjectKey' },
   teachers: { name: 'Teachers', keyField: 'teacherKey' },
   students: { name: 'Students', keyField: 'studentKey' },
   enrollments: { name: 'StudentEnrollments', keyField: 'enrollmentKey' },

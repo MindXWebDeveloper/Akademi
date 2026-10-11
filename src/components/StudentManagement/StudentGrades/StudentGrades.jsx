@@ -14,7 +14,7 @@ import {
 } from 'antd';
 import { ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons';
 import { getStudents } from '../../../data/students';
-import { getRecords } from '../../../data/schoolRecords';
+import { getSubjects } from '../../../data/subjects';
 import { getCurrentSchoolYear, getSchoolYears } from '../../../data/schoolYears';
 import {
   completeGroupAverage,
@@ -67,7 +67,7 @@ const StudentGrades = () => {
     ? requestedReturnTo
     : '/students';
   const goToList = () => navigate(returnTo, { replace: true });
-  const subjects = [...new Set(getRecords('teachers').map((teacher) => teacher.subject).filter(Boolean))].sort();
+  const subjects = getSubjects().map((subject) => subject.name).sort((left, right) => left.localeCompare(right, 'vi'));
   const schoolYears = getSchoolYears();
   const currentSchoolYear = getCurrentSchoolYear();
   const [subject, setSubject] = useState(subjects[0] ?? '');

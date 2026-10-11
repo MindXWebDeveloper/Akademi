@@ -16,7 +16,7 @@ import {
 } from 'antd';
 import { ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons';
 import { getStudents } from '../../../data/students';
-import { getRecords } from '../../../data/schoolRecords';
+import { getSubjects } from '../../../data/subjects';
 import {
   getAnnualAverage,
   getGradeConfig,
@@ -44,7 +44,7 @@ const StudentTranscript = ({ profileId, selfService = false }) => {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const schoolYears = getSchoolYears();
-  const subjects = [...new Set(getRecords('teachers').map((teacher) => teacher.subject).filter(Boolean))].sort();
+  const subjects = getSubjects().map((subject) => subject.name).sort((left, right) => left.localeCompare(right, 'vi'));
   const requestedYear = searchParams.get('year');
   const schoolYear = schoolYears.includes(requestedYear) ? requestedYear : getCurrentSchoolYear();
   const student = getStudents(schoolYear).find((item) => item.id === studentId);

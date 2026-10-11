@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, Empty, Select, Table, Typography } from 'antd';
-import { getRecords } from '../../data/schoolRecords';
+import { getSubjects } from '../../data/subjects';
 import {
   getAnnualAverage,
   getGradeConfig,
@@ -21,7 +21,7 @@ const StudentGradeSummary = ({ studentId }) => {
   const navigate = useNavigate();
   const schoolYears = getSchoolYears();
   const [schoolYear, setSchoolYear] = useState(getCurrentSchoolYear());
-  const subjects = [...new Set(getRecords('teachers').map((teacher) => teacher.subject).filter(Boolean))].sort();
+  const subjects = getSubjects().map((subject) => subject.name).sort((left, right) => left.localeCompare(right, 'vi'));
 
   const rows = subjects.map((subject) => {
     const firstConfig = getGradeConfig(subject, schoolYear, '1');

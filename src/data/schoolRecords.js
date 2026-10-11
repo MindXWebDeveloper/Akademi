@@ -6,6 +6,7 @@ import {
   updateResourceRecord,
 } from './apiClient';
 import { createLinkedUserAccount, createUsernameFromName } from './userAccounts';
+import { getTeacherSubjectKeys, getTeacherSubjectNames } from './subjects';
 
 const recordDefinitions = {
   teachers: {
@@ -17,14 +18,14 @@ const recordDefinitions = {
     searchableFields: [
       { name: 'id', label: 'Mã giáo viên', placeholder: 'Ví dụ: GV001' },
       { name: 'name', label: 'Tên giáo viên', placeholder: 'Nhập họ tên' },
-      { name: 'subject', label: 'Môn giảng dạy', placeholder: 'Nhập môn học' },
+      { name: 'subject', label: 'Môn giảng dạy', type: 'subjects', placeholder: 'Chọn môn học' },
     ],
     fields: [
       { name: 'id', label: 'Mã giáo viên', required: true, readOnlyOnCreate: true },
       { name: 'name', label: 'Họ và tên', required: true },
       { name: 'gender', label: 'Giới tính', required: true, type: 'select', options: ['Nam', 'Nữ', 'Khác'] },
       { name: 'birthYear', label: 'Năm sinh', required: true, type: 'year' },
-      { name: 'subject', label: 'Môn giảng dạy', required: true },
+      { name: 'subjectKeys', label: 'Môn giảng dạy', required: true, type: 'subjects', wide: true },
       { name: 'qualification', label: 'Trình độ chuyên môn', required: true },
       { name: 'phone', label: 'Số điện thoại', required: true, type: 'phone' },
       { name: 'email', label: 'Email', required: true, type: 'email' },
@@ -33,7 +34,7 @@ const recordDefinitions = {
     columns: [
       { title: 'Mã giáo viên', dataIndex: 'id', key: 'id' },
       { title: 'Họ và tên', dataIndex: 'name', key: 'name' },
-      { title: 'Môn giảng dạy', dataIndex: 'subject', key: 'subject' },
+      { title: 'Môn giảng dạy', dataIndex: 'subjects', key: 'subjects' },
       { title: 'Trình độ', dataIndex: 'qualification', key: 'qualification' },
       { title: 'Số điện thoại', dataIndex: 'phone', key: 'phone' },
       { title: 'Email', dataIndex: 'email', key: 'email' },
@@ -88,7 +89,11 @@ export const getRecords = (type) => {
     ...(type === 'classes' ? {
       schoolYear: record.schoolYear ?? getSchoolYearNameById(record.schoolYearId) ?? '',
       capacity: String(record.capacity ?? ''),
-    } : {}),
+    } : {
+      subjectKeys: getTeacherSubjectKeys(record.teacherKey ?? record.id),
+      subjects: getTeacherSubjectNames(record.teacherKey ?? record.id).join(', '),
+      subject: getTeacherSubjectNames(record.teacherKey ?? record.id).join(', '),
+    }),
   })).filter((record) => record.id);
 };
 

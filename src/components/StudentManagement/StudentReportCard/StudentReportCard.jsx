@@ -12,7 +12,7 @@ import {
 } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { getStudents } from '../../../data/students';
-import { getRecords } from '../../../data/schoolRecords';
+import { getSubjects } from '../../../data/subjects';
 import {
   completeGroupAverage,
   getAnnualAverage,
@@ -78,7 +78,7 @@ const StudentReportCard = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const schoolYears = getSchoolYears();
-  const subjects = [...new Set(getRecords('teachers').map((teacher) => teacher.subject).filter(Boolean))].sort();
+  const subjects = getSubjects().map((subject) => subject.name).sort((left, right) => left.localeCompare(right, 'vi'));
   const [subject, setSubject] = useState(() => {
     const requestedSubject = searchParams.get('subject');
     return subjects.includes(requestedSubject) ? requestedSubject : subjects[0] ?? '';

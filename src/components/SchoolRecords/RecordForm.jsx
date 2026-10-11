@@ -23,6 +23,18 @@ import {
   saveRecord,
 } from '../../data/schoolRecords';
 import { getCurrentSchoolYear, getSchoolYears } from '../../data/schoolYears';
+import { getSubjects } from '../../data/subjects';
+import { getResourceRecords } from '../../data/apiClient';
+
+const isPrincipalTeacher = (teacher) => (
+  teacher?.position?.toLocaleLowerCase('vi').includes('hiệu trưởng')
+  || getResourceRecords('users').some((user) => (
+    ['principal', 'admin', 'hiệu trưởng', 'ban giám hiệu'].includes(
+      user.role?.trim().toLocaleLowerCase('vi'),
+    )
+    && String(user.teacherKey ?? user.TeacherKey ?? '') === String(teacher?.id ?? '')
+  ))
+);
 
 const RecordForm = ({ type, isCreateMode = false, selfService = false, profileId }) => {
   const definition = getRecordDefinition(type);
@@ -33,6 +45,10 @@ const RecordForm = ({ type, isCreateMode = false, selfService = false, profileId
   const requestedYear = searchParams.get('schoolYear') ?? getCurrentSchoolYear();
   const [form] = Form.useForm();
   const record = isCreateMode ? null : getRecordById(type, activeRecordId);
+  const principalTeacher = type === 'teachers' && !isCreateMode && isPrincipalTeacher(record);
+  const visibleFields = definition.fields.filter((field) => (
+    !(principalTeacher && field.name === 'subjectKeys')
+  ));
   const listRoute = type === 'classes'
     ? `${definition.route}?schoolYear=${record?.schoolYear ?? requestedYear}`
     : definition.route;
@@ -118,10 +134,13 @@ const RecordForm = ({ type, isCreateMode = false, selfService = false, profileId
       <Card>
         <Form form={form} layout="vertical" onFinish={onFinish}>
           <Row gutter={[20, 0]}>
-            {definition.fields.map((field) => {
+            {visibleFields.map((field) => {
               const rules = field.required
                 ? [{ required: true, whitespace: field.type !== 'number', message: `Vui lòng nhập ${field.label.toLocaleLowerCase('vi')}.` }]
                 : [];
+              if (field.type === 'subjects') {
+                rules.splice(0, rules.length, { required: true, type: 'array', min: 1, message: 'Chọn ít nhất một môn giảng dạy.' });
+              }
               if (field.type === 'year') {
                 rules.push({ pattern: /^\d{4}$/, message: 'Năm phải gồm 4 chữ số.' });
               }
@@ -148,6 +167,15 @@ const RecordForm = ({ type, isCreateMode = false, selfService = false, profileId
                       <Select options={getSchoolYears().map((schoolYear) => ({ value: schoolYear, label: schoolYear }))} />
                     ) : field.type === 'select' ? (
                       <Select options={field.options.map((option) => ({ value: option, label: option }))} />
+                    ) : field.type === 'subjects' ? (
+                      <Select
+                        mode="multiple"
+                        options={getSubjects().map((subject) => ({ value: subject.id, label: subject.name }))}
+                        placeholder="Chọn môn giảng dạy"
+                        showSearch
+                        optionFilterProp="label"
+                        disabled={selfService}
+                      />
                     ) : field.type === 'number' ? (
                       <InputNumber min={1} precision={0} style={{ width: '100%' }} />
                     ) : (

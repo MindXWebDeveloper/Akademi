@@ -3,6 +3,7 @@ import {
   getResourceRecords,
   updateResourceRecord,
 } from './apiClient';
+import { getSubjectByName } from './subjects';
 
 export const gradeWeights = {
   oralScores: 1,
@@ -30,8 +31,13 @@ const gradeRows = () => getResourceRecords('grades').map((item) => ({
 }));
 
 export const getGradeConfig = (subject, schoolYear, semester) => {
+  const subjectKey = getSubjectByName(subject)?.id;
   const key = makeConfigKey(subject, schoolYear, semester);
-  return gradeRows().find((item) => item.type === 'config' && item.key === key) ?? {
+  return gradeRows().find((item) => (
+    item.type === 'config'
+    && ((subjectKey && String(item.subjectKey) === subjectKey && item.schoolYear === schoolYear && String(item.semester) === String(semester))
+      || item.key === key)
+  )) ?? {
     oralCount: 2,
     shortTestCount: 2,
     onePeriodCount: 1,
@@ -39,10 +45,26 @@ export const getGradeConfig = (subject, schoolYear, semester) => {
 };
 
 export const saveGradeConfig = async (subject, schoolYear, semester, config) => {
+  const subjectRecord = getSubjectByName(subject);
+  if (!subjectRecord) return { saved: false, reason: 'subject-not-found' };
   const key = makeConfigKey(subject, schoolYear, semester);
-  const current = gradeRows().find((item) => item.type === 'config' && item.key === key);
+  const current = gradeRows().find((item) => (
+    item.type === 'config'
+    && ((String(item.subjectKey) === subjectRecord.id && item.schoolYear === schoolYear && String(item.semester) === String(semester))
+      || item.key === key)
+  ));
   try {
-    const row = { ...current, ...config, id: current?.id ?? `config|${key}`, type: 'config', key, subject, schoolYear, semester };
+    const row = {
+      ...current,
+      ...config,
+      id: current?.id ?? `config|${key}`,
+      type: 'config',
+      key,
+      subjectKey: subjectRecord.id,
+      subject,
+      schoolYear,
+      semester,
+    };
     if (current) await updateResourceRecord('grades', row);
     else await createResourceRecord('grades', row);
     return { saved: true };
@@ -52,8 +74,13 @@ export const saveGradeConfig = async (subject, schoolYear, semester, config) => 
 };
 
 export const getGradeRecord = (studentId, subject, schoolYear, semester) => {
+  const subjectKey = getSubjectByName(subject)?.id;
   const key = makeRecordKey(studentId, subject, schoolYear, semester);
-  return gradeRows().find((item) => item.type === 'record' && item.key === key) ?? {
+  return gradeRows().find((item) => (
+    item.type === 'record'
+    && ((subjectKey && String(item.subjectKey) === subjectKey && item.studentId === studentId && item.schoolYear === schoolYear && String(item.semester) === String(semester))
+      || item.key === key)
+  )) ?? {
     oralScores: [],
     shortTestScores: [],
     onePeriodScores: [],
@@ -63,10 +90,27 @@ export const getGradeRecord = (studentId, subject, schoolYear, semester) => {
 };
 
 export const saveGradeRecord = async (studentId, subject, schoolYear, semester, record) => {
+  const subjectRecord = getSubjectByName(subject);
+  if (!subjectRecord) return { saved: false, reason: 'subject-not-found' };
   const key = makeRecordKey(studentId, subject, schoolYear, semester);
-  const current = gradeRows().find((item) => item.type === 'record' && item.key === key);
+  const current = gradeRows().find((item) => (
+    item.type === 'record'
+    && ((String(item.subjectKey) === subjectRecord.id && item.studentId === studentId && item.schoolYear === schoolYear && String(item.semester) === String(semester))
+      || item.key === key)
+  ));
   try {
-    const row = { ...current, ...record, id: current?.id ?? `record|${key}`, type: 'record', key, studentId, subject, schoolYear, semester };
+    const row = {
+      ...current,
+      ...record,
+      id: current?.id ?? `record|${key}`,
+      type: 'record',
+      key,
+      subjectKey: subjectRecord.id,
+      studentId,
+      subject,
+      schoolYear,
+      semester,
+    };
     if (current) await updateResourceRecord('grades', row);
     else await createResourceRecord('grades', row);
     return { saved: true };

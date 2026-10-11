@@ -1,33 +1,34 @@
 import { useEffect, useState } from 'react';
 import {
-  UploadOutlined,
   UserOutlined,
   VideoCameraOutlined,
   BarsOutlined,
   BellOutlined,
   SearchOutlined,
   LogoutOutlined,
+  BookOutlined,
 } from '@ant-design/icons';
 import { Layout, Menu, theme, Button, Space, Input, message } from 'antd';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { getMenuAccess } from '../../data/roleAccess';
+import { getMenuAccess, hideableMenus } from '../../data/roleAccess';
 
 const { Header, Content, Footer, Sider } = Layout;
 
 const menuItems = [
-  { key: '1', icon: <UserOutlined />, label: 'Tổng quan' },
-  { key: '2', icon: <UserOutlined />, label: 'Học sinh', children: [
-    { key: '2-1', label: 'Quản lý học sinh' },
-    { key: '2-2', label: 'Sắp lớp' },
+  { key: 'dashboard', icon: <UserOutlined />, label: 'Tổng quan' },
+  { key: 'students-group', icon: <UserOutlined />, label: 'Học sinh', children: [
+    { key: 'students', label: 'Quản lý học sinh' },
+    { key: 'class-promotions', label: 'Sắp lớp' },
   ] },
-  { key: '3', icon: <UserOutlined />, label: 'Giáo viên', children: [{ key: '3-1', label: 'Quản lý giáo viên' }] },
-  { key: '4', icon: <BarsOutlined />, label: 'Lớp học', children: [{ key: '4-1', label: 'Quản lý lớp học' }] },
-  { key: '5', icon: <BarsOutlined />, label: 'Thời khóa biểu' },
-  { key: '6', icon: <VideoCameraOutlined />, label: 'Hoạt động ngoài khóa' },
-  { key: '7', icon: <BellOutlined />, label: 'Thông báo' },
-  { key: '8', icon: <UserOutlined />, label: 'Thư viện' },
-  { key: '9', icon: <UserOutlined />, label: 'Phân quyền' },
-  { key: '10', icon: <LogoutOutlined />, label: 'Đăng xuất', danger: true },
+  { key: 'subjects', icon: <BookOutlined />, label: 'Môn học' },
+  { key: 'teachers-group', icon: <UserOutlined />, label: 'Giáo viên', children: [{ key: 'teachers', label: 'Quản lý giáo viên' }] },
+  { key: 'classes-group', icon: <BarsOutlined />, label: 'Lớp học', children: [{ key: 'classes', label: 'Quản lý lớp học' }] },
+  { key: 'timetable', icon: <BarsOutlined />, label: 'Thời khóa biểu' },
+  { key: 'activities', icon: <VideoCameraOutlined />, label: 'Hoạt động ngoài khóa' },
+  { key: 'notices', icon: <BellOutlined />, label: 'Thông báo' },
+  { key: 'library', icon: <UserOutlined />, label: 'Thư viện' },
+  { key: 'roles', icon: <UserOutlined />, label: 'Phân quyền' },
+  { key: 'logout', icon: <LogoutOutlined />, label: 'Đăng xuất', danger: true },
 ];
 
 const AuthenticatedLayout = ({ onLogout, user }) => {
@@ -54,14 +55,15 @@ const AuthenticatedLayout = ({ onLogout, user }) => {
     location.pathname === path || location.pathname.startsWith(`${path}/`)
   ))?.[1];
   const isRoleManagement = location.pathname === '/roles';
+  const isSubjectManagement = location.pathname === '/subjects';
   const isTimetableRoute = location.pathname.startsWith('/timetable');
   const isPersonalProfileRoute = location.pathname === '/profile';
-  const isPersonalDataManagementRoute = location.pathname.startsWith('/students')
-    || location.pathname.startsWith('/teachers');
+  const isTeacherManagementRoute = location.pathname.startsWith('/teachers');
   const routeAccess = restrictedMenuKey ? getMenuAccess(roleKey, restrictedMenuKey) : 'edit';
   const isForbidden = Boolean(
     (restrictedMenuKey && routeAccess === 'hide')
-    || (isPersonalDataManagementRoute && roleKey !== 'principal')
+    || (isSubjectManagement && roleKey !== 'principal')
+    || (isTeacherManagementRoute && roleKey !== 'principal')
     || (isRoleManagement && roleKey !== 'principal'),
   );
   const isReadOnly = routeAccess === 'read' && !isForbidden;
@@ -77,33 +79,53 @@ const AuthenticatedLayout = ({ onLogout, user }) => {
   const isActivityRoute = location.pathname.startsWith('/activities');
   const isLibraryRoute = location.pathname.startsWith('/library');
   const isNoticeRoute = location.pathname.startsWith('/notices');
+  const isSubjectRoute = location.pathname.startsWith('/subjects');
   const isPromotionRoute = location.pathname.startsWith('/class-promotions');
-  const activeGroupKey = isStudentRoute || isPromotionRoute ? '2' : isTeacherRoute ? '3' : isClassRoute ? '4' : null;
-  const activeItemKey = isPromotionRoute ? '2-2' : isStudentRoute ? '2-1' : isTeacherRoute ? '3-1' : isClassRoute ? '4-1' : isTimetableRoute ? '5' : isActivityRoute ? '6' : isNoticeRoute ? '7' : isLibraryRoute ? '11' : '1';
+  const activeGroupKey = isStudentRoute || isPromotionRoute
+    ? 'students-group'
+    : isTeacherRoute
+      ? 'teachers-group'
+      : isClassRoute
+        ? 'classes-group'
+        : null;
+  const activeItemKey = isPromotionRoute
+    ? 'class-promotions'
+    : isStudentRoute
+      ? 'students'
+      : isTeacherRoute
+        ? 'teachers'
+        : isClassRoute
+          ? 'classes'
+          : isTimetableRoute
+            ? 'timetable'
+            : isActivityRoute
+              ? 'activities'
+              : isNoticeRoute
+                ? 'notices'
+                : isLibraryRoute
+                  ? 'library'
+                  : isSubjectRoute
+                    ? 'subjects'
+                    : location.pathname === '/roles'
+                      ? 'roles'
+                      : 'dashboard';
   const [isMobile, setIsMobile] = useState(false);
   const [openKeys, setOpenKeys] = useState([]);
   const {
     token: { colorBgContainer },
   } = theme.useToken();
   const visibleMenuItems = menuItems.flatMap((item) => {
-    if (item.key === '17') return roleKey === 'principal' ? [item] : [];
+    if (item.key === 'roles' || item.key === 'subjects') {
+      return roleKey === 'principal' ? [item] : [];
+    }
     if (item.children) {
       const children = item.children.filter((child) => {
-        if (child.key === '2-1') return getMenuAccess(roleKey, 'students') !== 'hide';
-        if (child.key === '2-2') return getMenuAccess(roleKey, 'class-promotions') !== 'hide';
-        if (child.key === '3-1') return getMenuAccess(roleKey, 'teachers') !== 'hide';
-        if (child.key === '4-1') return getMenuAccess(roleKey, 'classes') !== 'hide';
-        return true;
+        return getMenuAccess(roleKey, child.key) !== 'hide';
       });
       return children.length ? [{ ...item, children }] : [];
     }
-    const menuAccessKey = {
-      5: 'timetable',
-      6: 'activities',
-      7: 'notices',
-      11: 'library',
-    }[item.key];
-    return !menuAccessKey || getMenuAccess(roleKey, menuAccessKey) !== 'hide' ? [item] : [];
+    if (!hideableMenus.some(({ key }) => key === item.key)) return [item];
+    return getMenuAccess(roleKey, item.key) !== 'hide' ? [item] : [];
   });
 
   const handleMenuClick = ({ key }) => {
@@ -111,42 +133,29 @@ const AuthenticatedLayout = ({ onLogout, user }) => {
       if (isMobile) setOpenKeys([]);
     };
 
-    if (key === '18') {
+    if (key === 'logout') {
       message.info('Đã đăng xuất');
       closeMobileSubmenu();
       onLogout?.();
       return;
     }
 
-    if (key === '1') {
-      navigate('/dashboard');
-      closeMobileSubmenu();
-    } else if (key === '2-1') {
-      navigate('/students');
-      closeMobileSubmenu();
-    } else if (key === '2-2') {
-      navigate('/class-promotions');
-      closeMobileSubmenu();
-    } else if (key === '3-1') {
-      navigate('/teachers');
-      closeMobileSubmenu();
-    } else if (key === '4-1') {
-      navigate('/classes');
-      closeMobileSubmenu();
-    } else if (key === '5') {
-      navigate('/timetable');
-      closeMobileSubmenu();
-    } else if (key === '6') {
-      navigate('/activities');
-      closeMobileSubmenu();
-    } else if (key === '7') {
-      navigate('/notices');
-      closeMobileSubmenu();
-    } else if (key === '11') {
-      navigate('/library');
-      closeMobileSubmenu();
-    } else if (key === '17') {
-      navigate('/roles');
+    const menuRoutes = {
+      dashboard: '/dashboard',
+      students: '/students',
+      'class-promotions': '/class-promotions',
+      teachers: '/teachers',
+      classes: '/classes',
+      timetable: '/timetable',
+      activities: '/activities',
+      notices: '/notices',
+      library: '/library',
+      subjects: '/subjects',
+      roles: '/roles',
+    };
+    const route = menuRoutes[key];
+    if (route) {
+      navigate(route);
       closeMobileSubmenu();
     }
   };

@@ -15,6 +15,7 @@ import {
 import { ClearOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import { getRecordDefinition, getRecords } from '../../data/schoolRecords';
 import { getCurrentSchoolYear, getSchoolYears } from '../../data/schoolYears';
+import { getSubjects } from '../../data/subjects';
 
 const RecordList = ({ type }) => {
   const definition = getRecordDefinition(type);
@@ -94,7 +95,20 @@ const RecordList = ({ type }) => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 16 }}>
             {definition.searchableFields.map((field) => (
               <Form.Item key={field.name} label={field.label} name={field.name} style={{ marginBottom: 0 }}>
-                <Input allowClear placeholder={field.placeholder} />
+                {field.type === 'subjects' ? (
+                  <Select
+                    allowClear
+                    showSearch
+                    optionFilterProp="label"
+                    placeholder={field.placeholder}
+                    options={getSubjects().map((subject) => ({
+                      value: subject.name,
+                      label: subject.name,
+                    }))}
+                  />
+                ) : (
+                  <Input allowClear placeholder={field.placeholder} />
+                )}
               </Form.Item>
             ))}
           </div>

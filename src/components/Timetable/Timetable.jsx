@@ -19,6 +19,7 @@ import { ClearOutlined, EditOutlined, PlusOutlined, SettingOutlined } from '@ant
 import { useOutletContext } from 'react-router-dom';
 import { getRecords } from '../../data/schoolRecords';
 import { getResourceRecords } from '../../data/apiClient';
+import { getSubjects } from '../../data/subjects';
 import {
   getLessons,
   getTimetableSettings,
@@ -123,6 +124,7 @@ const Timetable = () => {
       if (key && !uniqueTeachers.has(key)) uniqueTeachers.set(key, teacher);
     });
   const timetableTeachers = [...uniqueTeachers.values()];
+  const subjectOptions = getSubjects().map((subject) => ({ value: subject.name, label: subject.name }));
   const classOptions = classes.map((item) => ({ value: item.name, label: item.name }));
   const teacherOptions = timetableTeachers.map((item) => ({
     value: item.name,
@@ -426,8 +428,8 @@ const Timetable = () => {
           <Form.Item name="teacherName" label="Giáo viên" rules={[{ required: true, message: 'Chọn giáo viên.' }]}>
             <Select options={teacherOptions} showSearch optionFilterProp="label" placeholder="Chọn giáo viên" />
           </Form.Item>
-          <Form.Item name="subject" label="Môn học" rules={[{ required: true, whitespace: true, message: 'Nhập môn học.' }]}>
-            <Input maxLength={80} />
+          <Form.Item name="subject" label="Môn học" rules={[{ required: true, message: 'Chọn môn học.' }]}>
+            <Select options={subjectOptions} showSearch optionFilterProp="label" placeholder="Chọn môn học" />
           </Form.Item>
           <Form.Item name="room" label="Phòng học" rules={[{ required: true, whitespace: true, message: 'Nhập phòng học.' }]}>
             <Input maxLength={40} />
