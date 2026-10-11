@@ -3,7 +3,9 @@ import {
   BarsOutlined,
   BellOutlined,
 } from '@ant-design/icons';
-import { Row, Col, Card, Statistic, Button, Table, Tag, Space } from 'antd';
+import { useNavigate } from 'react-router-dom';
+import { Row, Col, Card, Statistic, Button, Table, Tag, Space, Empty, Typography } from 'antd';
+import { getActiveNotices } from '../../data/notices';
 
 const chartData = [
   { month: 'Tháng 12', value: 1000 },
@@ -21,7 +23,9 @@ const activityData = [
 ];
 
 const Dashboard = ({ user }) => {
+  const navigate = useNavigate();
   const displayName = user?.username ? (user.username === 'admin' ? 'Hiệu trưởng' : user.username) : 'Hiệu trưởng';
+  const latestNotices = getActiveNotices().slice(0, 3);
 
   return (
     <>
@@ -106,21 +110,38 @@ const Dashboard = ({ user }) => {
             <Col xs={24} md={10}>
               <Card
                 title="Thông báo mới nhất"
-                extra={<a href="#all-announcements" style={{ color: '#1890ff' }}>Xem tất cả</a>}
+                extra={<Button type="link" onClick={() => navigate('/notices')}>Xem thêm</Button>}
                 style={{ borderRadius: '8px', height: '100%' }}
               >
-                <Space orientation="vertical" style={{ width: '100%' }} size="middle">
-                  <div style={{ orientation: 'vertical', width: '100%', padding: '14px', background: '#f0f5ff', borderRadius: '6px', borderLeft: '4px solid #1890ff' }}>
-                    <p style={{ margin: '0 0 6px 0', fontWeight: 'bold', color: '#1f1f1f' }}>Họp ban giám hiệu tháng 6</p>
-                    <p style={{ margin: '0', fontSize: '13px', color: '#595959' }}>Cuộc họp sẽ diễn ra vào 09:00 sáng mai tại phòng họp A</p>
-                    <p style={{ margin: '8px 0 0 0', fontSize: '11px', color: '#8c8c8c' }}>10 phút trước</p>
-                  </div>
-                  <div style={{ orientation: 'vertical', width: '100%', padding: '14px', background: '#fff1f0', borderRadius: '6px', borderLeft: '4px solid #ff4d4f' }}>
-                    <p style={{ margin: '0 0 6px 0', fontWeight: 'bold', color: '#1f1f1f' }}>Thông báo nghỉ lễ 30/4 - 1/5</p>
-                    <p style={{ margin: '0', fontSize: '13px', color: '#595959' }}>Nhà trường thông báo lịch nghỉ lễ 30/4 và 01/5.</p>
-                    <p style={{ margin: '8px 0 0 0', fontSize: '11px', color: '#8c8c8c' }}>2 giờ trước</p>
-                  </div>
-                </Space>
+                {latestNotices.length ? (
+                  <Space orientation="vertical" style={{ width: '100%' }} size="middle">
+                    {latestNotices.map((notice) => (
+                      <div
+                        key={notice.id}
+                        style={{
+                          width: '100%',
+                          padding: 14,
+                          background: notice.important ? '#fff1f0' : '#f5f7fa',
+                          borderRadius: 6,
+                          borderLeft: `4px solid ${notice.important ? '#ff4d4f' : '#8c8c8c'}`,
+                        }}
+                      >
+                        <Space wrap size={6} style={{ marginBottom: 6 }}>
+                          <Typography.Text strong>{notice.title}</Typography.Text>
+                          {notice.important && <Tag color="red">Quan trọng</Tag>}
+                        </Space>
+                        <Typography.Paragraph style={{ margin: 0, fontSize: 13, color: '#595959' }} ellipsis={{ rows: 3 }}>
+                          {notice.content}
+                        </Typography.Paragraph>
+                        {notice.type === 'meeting' && <Typography.Text type="secondary">Phòng họp: {notice.meetingRoom}</Typography.Text>}
+                        {notice.type === 'personal' && <Typography.Text type="secondary">Người nhận: {notice.recipient}</Typography.Text>}
+                        <Typography.Text type="secondary" style={{ display: 'block', marginTop: 8, fontSize: 11 }}>
+                          Hiển thị đến {new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium' }).format(new Date(`${notice.endDate}T00:00:00`))}
+                        </Typography.Text>
+                      </div>
+                    ))}
+                  </Space>
+                ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Hiện chưa có thông báo đang hiển thị." />}
               </Card>
             </Col>
           </Row>

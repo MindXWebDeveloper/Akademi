@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Alert,
   Button,
@@ -10,6 +10,7 @@ import {
   Row,
   Select,
   Space,
+  Table,
   Typography,
   message,
 } from 'antd';
@@ -18,8 +19,11 @@ import {
   createStudent,
   generateStudentId,
   getStudentById,
+  getStudentEnrollments,
   saveStudent,
 } from '../../../data/students';
+import { getRecords } from '../../../data/schoolRecords';
+import { getCurrentSchoolYear, getSchoolYears } from '../../../data/schoolYears';
 import StudentGradeSummary from '../StudentGradeSummary';
 
 const genderOptions = [
@@ -32,6 +36,7 @@ const StudentDetail = ({ isCreateMode = false }) => {
   const { studentId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const requestedReturnTo = location.state?.returnTo;
   const returnTo = typeof requestedReturnTo === 'string'
     && (requestedReturnTo === '/students' || requestedReturnTo.startsWith('/students?'))
@@ -39,23 +44,31 @@ const StudentDetail = ({ isCreateMode = false }) => {
     : '/students';
   const goToList = () => navigate(returnTo, { replace: true });
   const [form] = Form.useForm();
-  const student = isCreateMode ? null : getStudentById(studentId);
+  const requestedSchoolYear = searchParams.get('schoolYear');
+  const schoolYears = getSchoolYears();
+  const [studentSchoolYear, setStudentSchoolYear] = useState(() => schoolYears.includes(requestedSchoolYear)
+    ? requestedSchoolYear
+    : getCurrentSchoolYear());
+  const student = isCreateMode ? null : getStudentById(studentId, studentSchoolYear);
+  const currentYearClasses = getRecords('classes').filter((item) => item.schoolYear === studentSchoolYear);
+  const enrollmentHistory = getStudentEnrollments(studentId)
+    .sort((left, right) => right.schoolYear.localeCompare(left.schoolYear));
 
   useEffect(() => {
     if (isCreateMode) {
       form.resetFields();
       form.setFieldsValue({ id: generateStudentId() });
     } else {
-      const currentStudent = getStudentById(studentId);
+      const currentStudent = getStudentById(studentId, studentSchoolYear);
       if (currentStudent) {
         form.setFieldsValue(currentStudent);
       }
     }
-  }, [form, isCreateMode, studentId]);
+  }, [form, isCreateMode, studentId, studentSchoolYear]);
 
   const handleSave = (values) => {
     const saved = isCreateMode
-      ? createStudent(values)
+      ? createStudent(values, studentSchoolYear)
       : saveStudent(studentId, { ...student, ...values });
 
     if (!saved) {
@@ -102,7 +115,7 @@ const StudentDetail = ({ isCreateMode = false }) => {
           <Typography.Text type="secondary">
             {isCreateMode
               ? 'Nhập thông tin cá nhân, liên hệ và lớp học cho học sinh mới.'
-              : 'Xem và cập nhật thông tin cá nhân, liên hệ và lớp học.'}
+              : `Năm học ${studentSchoolYear} · Lớp ${student?.className || 'chưa được xếp lớp'}`}
           </Typography.Text>
         </div>
         {!isCreateMode && (
@@ -214,15 +227,20 @@ const StudentDetail = ({ isCreateMode = false }) => {
                 <Input type="email" maxLength={150} />
               </Form.Item>
             </Col>
-            <Col xs={24} md={12}>
-              <Form.Item
-                label="Lớp hiện tại"
-                name="className"
-                rules={[{ required: true, whitespace: true, message: 'Vui lòng nhập lớp hiện tại.' }]}
-              >
-                <Input maxLength={30} />
-              </Form.Item>
-            </Col>
+            {isCreateMode && (
+              <Col xs={24} md={12}>
+                <Form.Item
+                  label={`Lớp năm học ${studentSchoolYear}`}
+                  name="className"
+                  rules={[{ required: true, message: 'Vui lòng chọn lớp.' }]}
+                >
+                  <Select
+                    options={currentYearClasses.map((item) => ({ value: item.name, label: item.name }))}
+                    placeholder="Chọn lớp"
+                  />
+                </Form.Item>
+              </Col>
+            )}
           </Row>
 
           <Space style={{ marginTop: 8 }}>
@@ -235,6 +253,38 @@ const StudentDetail = ({ isCreateMode = false }) => {
           </Space>
         </Form>
       </Card>
+      {!isCreateMode && (
+        <Card
+          title="Lịch sử phân lớp theo năm học"
+          extra={(
+            <Select
+              aria-label="Năm học hồ sơ học sinh"
+              value={studentSchoolYear}
+              onChange={setStudentSchoolYear}
+              options={schoolYears.map((year) => ({
+                value: year,
+                label: `${year}${year === getCurrentSchoolYear() ? ' · Hiện tại' : ''}`,
+              }))}
+              style={{ width: 190 }}
+            />
+          )}
+          style={{ marginTop: 24 }}
+          styles={{ body: { padding: 0 } }}
+        >
+          {enrollmentHistory.length ? (
+            <Table
+              rowKey="schoolYear"
+              pagination={false}
+              dataSource={enrollmentHistory}
+              columns={[
+                { title: 'Năm học', dataIndex: 'schoolYear', key: 'schoolYear' },
+                { title: 'Lớp', dataIndex: 'className', key: 'className' },
+                { title: 'Mã lớp', dataIndex: 'classId', key: 'classId', render: (value) => value || '—' },
+              ]}
+            />
+          ) : <Typography.Text type="secondary" style={{ display: 'block', padding: 24 }}>Chưa có thông tin phân lớp theo năm học.</Typography.Text>}
+        </Card>
+      )}
       {!isCreateMode && <StudentGradeSummary studentId={studentId} />}
     </div>
   );

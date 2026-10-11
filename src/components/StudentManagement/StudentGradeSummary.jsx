@@ -8,8 +8,7 @@ import {
   getGradeRecord,
   getSemesterAverage,
 } from '../../data/grades';
-
-const schoolYears = ['2025-2026', '2026-2027', '2027-2028'];
+import { getCurrentSchoolYear, getSchoolYears } from '../../data/schoolYears';
 
 const formatScore = (score) => (
   score == null ? 'Chưa đủ điểm' : new Intl.NumberFormat('vi-VN', {
@@ -20,7 +19,8 @@ const formatScore = (score) => (
 
 const StudentGradeSummary = ({ studentId }) => {
   const navigate = useNavigate();
-  const [schoolYear, setSchoolYear] = useState('2026-2027');
+  const schoolYears = getSchoolYears();
+  const [schoolYear, setSchoolYear] = useState(getCurrentSchoolYear());
   const subjects = [...new Set(getRecords('teachers').map((teacher) => teacher.subject).filter(Boolean))].sort();
 
   const rows = subjects.map((subject) => {

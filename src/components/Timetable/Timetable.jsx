@@ -23,6 +23,7 @@ import {
   saveLesson,
   saveTimetableSettings,
 } from '../../data/timetable';
+import { getCurrentSchoolYear, getSchoolYears } from '../../data/schoolYears';
 
 const weekdays = [
   { key: 'monday', label: 'Thứ 2' },
@@ -69,9 +70,12 @@ const buildPeriods = (settings) => {
 const Timetable = () => {
   const [viewMode, setViewMode] = useState('class');
   const [selectedId, setSelectedId] = useState();
-  const [lessons, setLessons] = useState(getLessons);
-  const [settings, setSettings] = useState(getTimetableSettings);
-  const [draftSettings, setDraftSettings] = useState(getTimetableSettings);
+  const currentSchoolYear = getCurrentSchoolYear();
+  const schoolYears = getSchoolYears();
+  const [schoolYear, setSchoolYear] = useState(currentSchoolYear);
+  const [lessons, setLessons] = useState(() => getLessons(currentSchoolYear));
+  const [settings, setSettings] = useState(() => getTimetableSettings(currentSchoolYear));
+  const [draftSettings, setDraftSettings] = useState(() => getTimetableSettings(currentSchoolYear));
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [editingLesson, setEditingLesson] = useState(null);
@@ -80,7 +84,7 @@ const Timetable = () => {
     () => buildPeriods(settings).filter((period) => period.time),
     [settings],
   );
-  const classes = getRecords('classes');
+  const classes = getRecords('classes').filter((item) => item.schoolYear === schoolYear);
   const teachers = getRecords('teachers');
   const classOptions = classes.map((item) => ({ value: item.name, label: `${item.name} (${item.id})` }));
   const teacherOptions = teachers.map((item) => ({ value: item.name, label: `${item.name} (${item.id})` }));
@@ -96,6 +100,7 @@ const Timetable = () => {
       teacherName: viewMode === 'teacher' ? selectedId : undefined,
       weekday: 'monday',
       period: periods[0]?.number,
+      schoolYear,
       ...defaults,
     });
     setIsModalOpen(true);
@@ -114,7 +119,7 @@ const Timetable = () => {
   };
 
   const handleSaveLesson = (values) => {
-    const result = saveLesson(values, editingLesson?.id);
+    const result = saveLesson({ ...values, schoolYear }, editingLesson?.id);
     if (!result.saved) {
       message.error(result.reason === 'conflict'
         ? 'Lớp hoặc giáo viên đã có lịch ở khung giờ này.'
@@ -122,7 +127,7 @@ const Timetable = () => {
       return;
     }
 
-    setLessons(getLessons());
+    setLessons(getLessons(schoolYear));
     closeModal();
     message.success(editingLesson ? 'Đã cập nhật tiết học.' : 'Đã thêm tiết học.');
   };
@@ -198,7 +203,7 @@ const Timetable = () => {
       return;
     }
 
-    if (!saveTimetableSettings(draftSettings)) {
+    if (!saveTimetableSettings(draftSettings, schoolYear)) {
       message.error('Không thể lưu cài đặt thời khóa biểu.');
       return;
     }
@@ -268,6 +273,15 @@ const Timetable = () => {
     setSelectedId(undefined);
   };
 
+  const handleSchoolYearChange = (value) => {
+    setSchoolYear(value);
+    setLessons(getLessons(value));
+    const nextSettings = getTimetableSettings(value);
+    setSettings(nextSettings);
+    setDraftSettings(nextSettings);
+    setSelectedId(undefined);
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
@@ -275,9 +289,16 @@ const Timetable = () => {
           <Typography.Title level={3} style={{ margin: '0 0 4px' }}>Thời khóa biểu</Typography.Title>
           <Typography.Text type="secondary">Tra cứu lịch học theo lớp hoặc lịch giảng dạy theo giáo viên.</Typography.Text>
         </div>
-        <Button icon={<SettingOutlined />} onClick={openSettings}>
-          Cài đặt lịch
-        </Button>
+        <Space wrap>
+          <Select
+            aria-label="Năm học thời khóa biểu"
+            value={schoolYear}
+            onChange={handleSchoolYearChange}
+            options={schoolYears.map((year) => ({ value: year, label: year }))}
+            style={{ width: 160 }}
+          />
+          <Button icon={<SettingOutlined />} onClick={openSettings}>Cài đặt lịch</Button>
+        </Space>
       </div>
 
       <Card style={{ marginBottom: 24 }}>

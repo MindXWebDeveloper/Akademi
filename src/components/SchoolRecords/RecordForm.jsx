@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Alert,
   Button,
@@ -22,24 +22,31 @@ import {
   getRecordDefinition,
   saveRecord,
 } from '../../data/schoolRecords';
+import { getCurrentSchoolYear, getSchoolYears } from '../../data/schoolYears';
 
 const RecordForm = ({ type, isCreateMode = false }) => {
   const definition = getRecordDefinition(type);
   const { recordId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const requestedYear = searchParams.get('schoolYear') ?? getCurrentSchoolYear();
   const [form] = Form.useForm();
   const record = isCreateMode ? null : getRecordById(type, recordId);
+  const listRoute = type === 'classes'
+    ? `${definition.route}?schoolYear=${record?.schoolYear ?? requestedYear}`
+    : definition.route;
 
   useEffect(() => {
     if (isCreateMode) {
       form.resetFields();
       form.setFieldsValue({ id: generateRecordId(type) });
+      if (type === 'classes') form.setFieldsValue({ schoolYear: requestedYear });
       return;
     }
 
     const currentRecord = getRecordById(type, recordId);
     if (currentRecord) form.setFieldsValue(currentRecord);
-  }, [form, isCreateMode, recordId, type]);
+  }, [form, isCreateMode, recordId, requestedYear, type]);
 
   const onFinish = (values) => {
     const normalizedRecord = {
@@ -63,7 +70,9 @@ const RecordForm = ({ type, isCreateMode = false }) => {
     message.success(isCreateMode
       ? `Đã thêm ${definition.singular}.`
       : `Đã cập nhật ${definition.singular}.`);
-    navigate(definition.route);
+    navigate(type === 'classes'
+      ? `${definition.route}?schoolYear=${normalizedRecord.schoolYear}`
+      : definition.route);
   };
 
   if (!record && !isCreateMode) {
@@ -74,7 +83,7 @@ const RecordForm = ({ type, isCreateMode = false }) => {
           showIcon
           message={`Không tìm thấy ${definition.singular}`}
           description={`${definition.idLabel} ${recordId} không tồn tại.`}
-          action={<Button onClick={() => navigate(definition.route)}>Về danh sách</Button>}
+          action={<Button onClick={() => navigate(listRoute)}>Về danh sách</Button>}
         />
       </Card>
     );
@@ -82,7 +91,7 @@ const RecordForm = ({ type, isCreateMode = false }) => {
 
   return (
     <div>
-      <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(definition.route)} style={{ paddingInline: 0, marginBottom: 16 }}>
+      <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(listRoute)} style={{ paddingInline: 0, marginBottom: 16 }}>
         Danh sách
       </Button>
       <div style={{ marginBottom: 24 }}>
@@ -123,7 +132,9 @@ const RecordForm = ({ type, isCreateMode = false }) => {
               return (
                 <Col key={field.name} xs={24} md={field.wide ? 24 : 12}>
                   <Form.Item label={field.label} name={field.name} rules={rules}>
-                    {field.type === 'select' ? (
+                    {field.type === 'schoolYear' ? (
+                      <Select options={getSchoolYears().map((schoolYear) => ({ value: schoolYear, label: schoolYear }))} />
+                    ) : field.type === 'select' ? (
                       <Select options={field.options.map((option) => ({ value: option, label: option }))} />
                     ) : field.type === 'number' ? (
                       <InputNumber min={1} precision={0} style={{ width: '100%' }} />
@@ -132,7 +143,8 @@ const RecordForm = ({ type, isCreateMode = false }) => {
                         type={field.type === 'email' ? 'email' : 'text'}
                         inputMode={field.type === 'phone' || field.type === 'year' ? 'numeric' : undefined}
                         maxLength={field.name === 'id' ? 30 : 160}
-                        readOnly={isCreateMode && field.readOnlyOnCreate}
+                        readOnly={(isCreateMode && field.readOnlyOnCreate)
+                          || (type === 'classes' && field.name === 'schoolYear' && !isCreateMode)}
                       />
                     )}
                   </Form.Item>
@@ -144,7 +156,7 @@ const RecordForm = ({ type, isCreateMode = false }) => {
             <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
               {isCreateMode ? `Thêm ${definition.singular}` : 'Lưu thay đổi'}
             </Button>
-            <Button onClick={() => navigate(definition.route)}>Hủy</Button>
+            <Button onClick={() => navigate(listRoute)}>Hủy</Button>
           </Space>
         </Form>
       </Card>

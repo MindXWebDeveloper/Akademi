@@ -1,3 +1,5 @@
+import { defaultSchoolYear } from './schoolYears';
+
 const initialLessons = [
   { id: 'TL001', className: '10A1', teacherName: 'Nguyễn Thu Hà', weekday: 'monday', period: 1, subject: 'Toán', room: 'A101' },
   { id: 'TL002', className: '10A1', teacherName: 'Trần Quốc Bảo', weekday: 'monday', period: 2, subject: 'Ngữ văn', room: 'A101' },
@@ -24,7 +26,8 @@ const initialLessons = [
 ];
 
 const storageKey = 'akademi.timetable';
-const settingsStorageKey = 'akademi.timetable.settings';
+const legacySettingsStorageKey = 'akademi.timetable.settings';
+const settingsStorageKey = (schoolYear) => `akademi.timetable.settings.${schoolYear}`;
 const defaultSettings = {
   periodCount: 10,
   morningPeriods: 5,
@@ -33,9 +36,10 @@ const defaultSettings = {
   periods: Array.from({ length: 10 }, () => ({ duration: 45, breakAfter: 5 })),
 };
 
-export const getTimetableSettings = () => {
+export const getTimetableSettings = (schoolYear = defaultSchoolYear) => {
   try {
-    const storedSettings = localStorage.getItem(settingsStorageKey);
+    const storedSettings = localStorage.getItem(settingsStorageKey(schoolYear))
+      ?? (schoolYear === defaultSchoolYear ? localStorage.getItem(legacySettingsStorageKey) : null);
     if (!storedSettings) return defaultSettings;
 
     const settings = JSON.parse(storedSettings);
@@ -57,26 +61,32 @@ export const getTimetableSettings = () => {
   }
 };
 
-export const saveTimetableSettings = (settings) => {
+export const saveTimetableSettings = (settings, schoolYear = defaultSchoolYear) => {
   try {
-    localStorage.setItem(settingsStorageKey, JSON.stringify(settings));
+    localStorage.setItem(settingsStorageKey(schoolYear), JSON.stringify(settings));
     return true;
   } catch {
     return false;
   }
 };
 
-export const getLessons = () => {
+const readLessons = () => {
   try {
     const storedLessons = localStorage.getItem(storageKey);
-    return storedLessons ? JSON.parse(storedLessons) : initialLessons;
+    const lessons = storedLessons ? JSON.parse(storedLessons) : initialLessons;
+    return lessons.map((lesson) => ({ ...lesson, schoolYear: lesson.schoolYear ?? defaultSchoolYear }));
   } catch {
-    return initialLessons;
+    return initialLessons.map((lesson) => ({ ...lesson, schoolYear: defaultSchoolYear }));
   }
 };
 
+export const getLessons = (schoolYear = defaultSchoolYear) => (
+  readLessons().filter((lesson) => lesson.schoolYear === schoolYear)
+);
+
 const hasConflict = (lessons, lesson, ignoredId) => lessons.some((existing) => (
   existing.id !== ignoredId
+  && existing.schoolYear === lesson.schoolYear
   && existing.weekday === lesson.weekday
   && Number(existing.period) === Number(lesson.period)
   && (existing.className === lesson.className || existing.teacherName === lesson.teacherName)
@@ -92,7 +102,7 @@ const generateLessonId = (lessons) => {
 };
 
 export const saveLesson = (lesson, lessonId) => {
-  const lessons = getLessons();
+  const lessons = readLessons();
   if (hasConflict(lessons, lesson, lessonId)) {
     return { saved: false, reason: 'conflict' };
   }

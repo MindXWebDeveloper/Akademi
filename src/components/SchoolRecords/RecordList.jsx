@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Alert,
   Button,
@@ -7,19 +7,24 @@ import {
   Empty,
   Form,
   Input,
+  Select,
   Space,
   Table,
   Typography,
 } from 'antd';
 import { ClearOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import { getRecordDefinition, getRecords } from '../../data/schoolRecords';
+import { getCurrentSchoolYear, getSchoolYears } from '../../data/schoolYears';
 
 const RecordList = ({ type }) => {
   const definition = getRecordDefinition(type);
   const [form] = Form.useForm();
   const [results, setResults] = useState(null);
   const [warning, setWarning] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const schoolYear = searchParams.get('schoolYear') ?? getCurrentSchoolYear();
   const navigate = useNavigate();
+  const records = getRecords(type).filter((record) => type !== 'classes' || record.schoolYear === schoolYear);
 
   const search = (values) => {
     const filters = definition.searchableFields
@@ -33,7 +38,7 @@ const RecordList = ({ type }) => {
     }
 
     setWarning('');
-    setResults(getRecords(type).filter((record) => filters.every(([name, value]) => (
+    setResults(records.filter((record) => filters.every(([name, value]) => (
       String(record[name] ?? '').toLocaleLowerCase('vi').includes(value)
     ))));
   };
@@ -65,9 +70,23 @@ const RecordList = ({ type }) => {
           <Typography.Title level={3} style={{ margin: '0 0 4px' }}>{definition.title}</Typography.Title>
           <Typography.Text type="secondary">Tìm kiếm, xem và cập nhật thông tin.</Typography.Text>
         </div>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate(`${definition.route}/new`)}>
-          Thêm {definition.singular}
-        </Button>
+        <Space wrap>
+          {type === 'classes' && (
+            <Select
+              aria-label="Năm học lớp"
+              value={schoolYear}
+              onChange={(value) => {
+                setSearchParams({ schoolYear: value }, { replace: true });
+                setResults(null);
+              }}
+              options={getSchoolYears().map((year) => ({ value: year, label: year }))}
+              style={{ width: 160 }}
+            />
+          )}
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate(`${definition.route}/new${type === 'classes' ? `?schoolYear=${schoolYear}` : ''}`)}>
+            Thêm {definition.singular}
+          </Button>
+        </Space>
       </div>
 
       <Card title="Điều kiện tìm kiếm" style={{ marginBottom: 24 }}>

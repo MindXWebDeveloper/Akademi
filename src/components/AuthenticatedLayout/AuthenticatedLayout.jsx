@@ -15,7 +15,10 @@ const { Header, Content, Footer, Sider } = Layout;
 
 const menuItems = [
   { key: '1', icon: <UserOutlined />, label: 'Tổng quan' },
-  { key: '2', icon: <UserOutlined />, label: 'Học sinh', children: [{ key: '2-1', label: 'Quản lý học sinh' }] },
+  { key: '2', icon: <UserOutlined />, label: 'Học sinh', children: [
+    { key: '2-1', label: 'Quản lý học sinh' },
+    { key: '2-2', label: 'Sắp lớp' },
+  ] },
   { key: '3', icon: <UserOutlined />, label: 'Giáo viên', children: [{ key: '3-1', label: 'Quản lý giáo viên' }] },
   { key: '4', icon: <BarsOutlined />, label: 'Lớp học', children: [{ key: '4-1', label: 'Quản lý lớp học' }] },
   { key: '5', icon: <BarsOutlined />, label: 'Thời khóa biểu' },
@@ -43,8 +46,10 @@ const AuthenticatedLayout = ({ onLogout }) => {
   const isTimetableRoute = location.pathname.startsWith('/timetable');
   const isActivityRoute = location.pathname.startsWith('/activities');
   const isLibraryRoute = location.pathname.startsWith('/library');
-  const activeGroupKey = isStudentRoute ? '2' : isTeacherRoute ? '3' : isClassRoute ? '4' : null;
-  const activeItemKey = isStudentRoute ? '2-1' : isTeacherRoute ? '3-1' : isClassRoute ? '4-1' : isTimetableRoute ? '5' : isActivityRoute ? '6' : isLibraryRoute ? '11' : '1';
+  const isNoticeRoute = location.pathname.startsWith('/notices');
+  const isPromotionRoute = location.pathname.startsWith('/class-promotions');
+  const activeGroupKey = isStudentRoute || isPromotionRoute ? '2' : isTeacherRoute ? '3' : isClassRoute ? '4' : null;
+  const activeItemKey = isPromotionRoute ? '2-2' : isStudentRoute ? '2-1' : isTeacherRoute ? '3-1' : isClassRoute ? '4-1' : isTimetableRoute ? '5' : isActivityRoute ? '6' : isNoticeRoute ? '7' : isLibraryRoute ? '11' : '1';
   const [isMobile, setIsMobile] = useState(false);
   const [openKeys, setOpenKeys] = useState([]);
   const {
@@ -69,6 +74,9 @@ const AuthenticatedLayout = ({ onLogout }) => {
     } else if (key === '2-1') {
       navigate('/students');
       closeMobileSubmenu();
+    } else if (key === '2-2') {
+      navigate('/class-promotions');
+      closeMobileSubmenu();
     } else if (key === '3-1') {
       navigate('/teachers');
       closeMobileSubmenu();
@@ -80,6 +88,9 @@ const AuthenticatedLayout = ({ onLogout }) => {
       closeMobileSubmenu();
     } else if (key === '6') {
       navigate('/activities');
+      closeMobileSubmenu();
+    } else if (key === '7') {
+      navigate('/notices');
       closeMobileSubmenu();
     } else if (key === '11') {
       navigate('/library');
@@ -99,7 +110,7 @@ const AuthenticatedLayout = ({ onLogout }) => {
         }}
       >
         <div style={{ padding: '16px', textAlign: 'center', fontSize: '20px', fontWeight: 'bold', color: '#1890ff', letterSpacing: '1px' }}>
-          🎓 Akademi
+          Akademi
         </div>
         <Menu
           mode="inline"

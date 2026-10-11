@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   Alert,
@@ -15,6 +15,7 @@ import {
 import { ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons';
 import { getStudents } from '../../../data/students';
 import { getRecords } from '../../../data/schoolRecords';
+import { getCurrentSchoolYear, getSchoolYears } from '../../../data/schoolYears';
 import {
   completeGroupAverage,
   getGradeConfig,
@@ -66,38 +67,53 @@ const StudentGrades = () => {
     ? requestedReturnTo
     : '/students';
   const goToList = () => navigate(returnTo, { replace: true });
-  const student = getStudents().find((item) => item.id === studentId);
   const subjects = [...new Set(getRecords('teachers').map((teacher) => teacher.subject).filter(Boolean))].sort();
+  const schoolYears = getSchoolYears();
+  const currentSchoolYear = getCurrentSchoolYear();
   const [subject, setSubject] = useState(subjects[0] ?? '');
-  const [schoolYear, setSchoolYear] = useState('2026-2027');
+  const [schoolYear, setSchoolYear] = useState(currentSchoolYear);
   const [semester, setSemester] = useState('1');
-  const [config, setConfig] = useState(() => getGradeConfig(subjects[0] ?? '', '2026-2027', '1'));
-  const [record, setRecord] = useState(() => getGradeRecord(studentId, subjects[0] ?? '', '2026-2027', '1'));
-
-  useEffect(() => {
-    if (!subject) return;
-    const nextConfig = getGradeConfig(subject, schoolYear, semester);
-    const nextRecord = getGradeRecord(studentId, subject, schoolYear, semester);
-    setConfig(nextConfig);
-    setRecord({
-      ...nextRecord,
-      oralScores: resizeScores(nextRecord.oralScores, nextConfig.oralCount),
-      shortTestScores: resizeScores(nextRecord.shortTestScores, nextConfig.shortTestCount),
-      onePeriodScores: resizeScores(nextRecord.onePeriodScores, nextConfig.onePeriodCount),
-    });
-  }, [schoolYear, semester, studentId, subject]);
+  const student = getStudents(schoolYear).find((item) => item.id === studentId);
+  const [gradeDrafts, setGradeDrafts] = useState({});
+  const selectionKey = [studentId, subject, schoolYear, semester].join('|');
+  const baseConfig = getGradeConfig(subject, schoolYear, semester);
+  const baseRecord = getGradeRecord(studentId, subject, schoolYear, semester);
+  const config = gradeDrafts[selectionKey]?.config ?? baseConfig;
+  const record = gradeDrafts[selectionKey]?.record ?? {
+    ...baseRecord,
+    oralScores: resizeScores(baseRecord.oralScores, baseConfig.oralCount),
+    shortTestScores: resizeScores(baseRecord.shortTestScores, baseConfig.shortTestCount),
+    onePeriodScores: resizeScores(baseRecord.onePeriodScores, baseConfig.onePeriodCount),
+  };
 
   const updateCount = (countKey, scoreKey, value) => {
     const count = Math.max(0, Math.min(20, Number(value) || 0));
-    setConfig((current) => ({ ...current, [countKey]: count }));
-    setRecord((current) => ({ ...current, [scoreKey]: resizeScores(current[scoreKey], count) }));
+    setGradeDrafts((current) => {
+      const currentDraft = current[selectionKey] ?? { config, record };
+      return {
+        ...current,
+        [selectionKey]: {
+          config: { ...currentDraft.config, [countKey]: count },
+          record: { ...currentDraft.record, [scoreKey]: resizeScores(currentDraft.record[scoreKey], count) },
+        },
+      };
+    });
   };
 
   const updateScore = (key, index, value) => {
-    setRecord((current) => ({
-      ...current,
-      [key]: current[key].map((score, scoreIndex) => (scoreIndex === index ? value : score)),
-    }));
+    setGradeDrafts((current) => {
+      const currentDraft = current[selectionKey] ?? { config, record };
+      return {
+        ...current,
+        [selectionKey]: {
+          ...currentDraft,
+          record: {
+            ...currentDraft.record,
+            [key]: currentDraft.record[key].map((score, scoreIndex) => (scoreIndex === index ? value : score)),
+          },
+        },
+      };
+    });
   };
 
   const save = () => {
@@ -148,7 +164,16 @@ const StudentGrades = () => {
             step={0.01}
             precision={2}
             value={record[row.key]}
-            onChange={(value) => setRecord((current) => ({ ...current, [row.key]: value }))}
+            onChange={(value) => setGradeDrafts((current) => {
+              const currentDraft = current[selectionKey] ?? { config, record };
+              return {
+                ...current,
+                [selectionKey]: {
+                  ...currentDraft,
+                  record: { ...currentDraft.record, [row.key]: value },
+                },
+              };
+            })}
             aria-label={`Điểm ${row.label.toLocaleLowerCase('vi')}`}
             style={{ width: 96 }}
           />
@@ -230,7 +255,7 @@ const StudentGrades = () => {
             <Select
               value={schoolYear}
               onChange={setSchoolYear}
-              options={['2025-2026', '2026-2027', '2027-2028'].map((item) => ({ value: item, label: item }))}
+              options={schoolYears.map((item) => ({ value: item, label: item }))}
               style={{ width: 180 }}
             />
           </div>

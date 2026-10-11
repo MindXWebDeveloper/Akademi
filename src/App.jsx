@@ -11,6 +11,8 @@ import StudentTranscript from './components/StudentManagement/StudentTranscript/
 import ExtracurricularActivities from './components/ExtracurricularActivities/ExtracurricularActivities';
 import ActivityDetail from './components/ExtracurricularActivities/ActivityDetail';
 import LibraryManagement from './components/Library/LibraryManagement';
+import NoticeManagement from './components/Notices/NoticeManagement';
+import ClassPromotions from './components/ClassPromotions/ClassPromotions';
 import TeacherManagement from './components/TeacherManagement/TeacherManagement';
 import TeacherDetail from './components/TeacherManagement/TeacherDetail/TeacherDetail';
 import ClassManagement from './components/ClassManagement/ClassManagement';
@@ -61,6 +63,8 @@ const App = () => {
         <Route path="/activities/new" element={<ActivityDetail isCreateMode />} />
         <Route path="/activities/:activityId" element={<ActivityDetail />} />
         <Route path="/library" element={<LibraryManagement />} />
+        <Route path="/notices" element={<NoticeManagement />} />
+        <Route path="/class-promotions" element={<ClassPromotions />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -1,3 +1,6 @@
+import { getRecords } from './schoolRecords';
+import { defaultSchoolYear, getCurrentSchoolYear } from './schoolYears';
+
 const initialStudents = [
   { id: 'HS001', name: 'Nguyễn Minh Anh', birthYear: '2010', hometown: 'Hà Nội', gender: 'Nữ', ethnicity: 'Kinh', address: 'Ba Đình, Hà Nội', phone: '0901234567', email: 'minhanh@example.com', className: '10A1', guardian: 'Nguyễn Văn Minh', status: 'Đang học' },
   { id: 'HS002', name: 'Trần Gia Bảo', birthYear: '2010', hometown: 'Hải Phòng', gender: 'Nam', ethnicity: 'Kinh', address: 'Lê Chân, Hải Phòng', phone: '0902345678', email: 'giabao@example.com', className: '10A1', guardian: 'Trần Thị Lan', status: 'Đang học' },
@@ -14,22 +17,96 @@ const initialStudents = [
 ];
 
 const storageKey = 'akademi.students';
+const enrollmentStorageKey = 'akademi.student-enrollments';
 
-export const getStudents = () => {
+const readStudentProfiles = () => {
   try {
-    const savedStudents = localStorage.getItem(storageKey);
-    return savedStudents ? JSON.parse(savedStudents) : initialStudents;
+    return JSON.parse(localStorage.getItem(storageKey)) ?? initialStudents;
   } catch {
     return initialStudents;
   }
 };
 
-export const getStudentById = (studentId) => (
-  getStudents().find((student) => student.id === studentId)
+const readEnrollments = () => {
+  try {
+    const stored = localStorage.getItem(enrollmentStorageKey);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return Array.isArray(parsed) ? parsed : [];
+    }
+  } catch {
+    return [];
+  }
+
+  const legacyStudents = readStudentProfiles();
+  const currentClasses = getRecords('classes').filter((item) => item.schoolYear === defaultSchoolYear);
+  const migratedEnrollments = legacyStudents
+    .filter((student) => student.className)
+    .map((student) => ({
+      studentId: student.id,
+      schoolYear: defaultSchoolYear,
+      classId: currentClasses.find((item) => item.name === student.className)?.id ?? null,
+      className: student.className,
+    }));
+
+  try {
+    localStorage.setItem(enrollmentStorageKey, JSON.stringify(migratedEnrollments));
+  } catch {
+    return migratedEnrollments;
+  }
+  return migratedEnrollments;
+};
+
+export const getStudentEnrollments = (studentId) => {
+  const enrollments = readEnrollments();
+  return studentId
+    ? enrollments.filter((enrollment) => enrollment.studentId === studentId)
+    : enrollments;
+};
+
+export const assignStudentEnrollments = (assignments) => {
+  const students = getStudents();
+  const studentIds = new Set(students.map((student) => student.id));
+  const assignmentKeys = new Set();
+  for (const assignment of assignments) {
+    const key = `${assignment.studentId}|${assignment.schoolYear}`;
+    if (!studentIds.has(assignment.studentId) || !assignment.schoolYear || !assignment.className || assignmentKeys.has(key)) {
+      return { saved: false, reason: 'invalid-assignment' };
+    }
+    assignmentKeys.add(key);
+  }
+
+  const enrollments = readEnrollments();
+  const replacedKeys = new Set(assignments.map((assignment) => `${assignment.studentId}|${assignment.schoolYear}`));
+  const nextEnrollments = [
+    ...enrollments.filter((enrollment) => !replacedKeys.has(`${enrollment.studentId}|${enrollment.schoolYear}`)),
+    ...assignments,
+  ];
+  try {
+    localStorage.setItem(enrollmentStorageKey, JSON.stringify(nextEnrollments));
+    return { saved: true };
+  } catch {
+    return { saved: false, reason: 'storage' };
+  }
+};
+
+export const getStudents = (schoolYear = getCurrentSchoolYear()) => {
+  const enrollments = readEnrollments().filter((enrollment) => enrollment.schoolYear === schoolYear);
+  const enrollmentByStudent = new Map(enrollments.map((enrollment) => [enrollment.studentId, enrollment]));
+  return readStudentProfiles().map((student) => ({
+    ...student,
+    classId: enrollmentByStudent.get(student.id)?.classId ?? null,
+    className: enrollmentByStudent.get(student.id)?.className ?? '',
+    schoolYear,
+  }));
+};
+
+export const getStudentById = (studentId, schoolYear = getCurrentSchoolYear()) => (
+  getStudents(schoolYear).find((student) => student.id === studentId)
 );
 
 export const generateStudentId = () => {
-  const highestId = getStudents().reduce((highest, student) => {
+  const highestId = readStudentProfiles().reduce((highest, student) => {
     const match = /^HS(\d+)$/.exec(student.id);
     return match ? Math.max(highest, Number(match[1])) : highest;
   }, 0);
@@ -37,19 +114,34 @@ export const generateStudentId = () => {
   return `HS${String(highestId + 1).padStart(3, '0')}`;
 };
 
-export const createStudent = (newStudent) => {
-  const students = getStudents();
+export const createStudent = (newStudent, schoolYear = getCurrentSchoolYear()) => {
+  const students = readStudentProfiles();
   const studentId = newStudent.id?.trim();
 
   if (!studentId || students.some((student) => student.id === studentId)) {
     return false;
   }
 
+  const previousProfiles = localStorage.getItem(storageKey);
   try {
     localStorage.setItem(storageKey, JSON.stringify([
       ...students,
       { ...newStudent, id: studentId, status: 'Đang học' },
     ]));
+    const matchingClass = getRecords('classes').find((item) => (
+      item.schoolYear === schoolYear && item.name === newStudent.className?.trim()
+    ));
+    const enrollmentResult = assignStudentEnrollments([{
+      studentId,
+      schoolYear,
+      classId: matchingClass?.id ?? null,
+      className: newStudent.className?.trim() ?? '',
+    }]);
+    if (!enrollmentResult.saved) {
+      if (previousProfiles == null) localStorage.removeItem(storageKey);
+      else localStorage.setItem(storageKey, previousProfiles);
+      return false;
+    }
     return true;
   } catch {
     return false;
@@ -57,7 +149,7 @@ export const createStudent = (newStudent) => {
 };
 
 export const saveStudent = (originalStudentId, updatedStudent) => {
-  const students = getStudents();
+  const students = readStudentProfiles();
   const studentIndex = students.findIndex((student) => student.id === originalStudentId);
 
   if (studentIndex === -1) {
@@ -71,7 +163,10 @@ export const saveStudent = (originalStudentId, updatedStudent) => {
     return false;
   }
 
-  students[studentIndex] = updatedStudent;
+  const studentProfile = { ...updatedStudent };
+  delete studentProfile.classId;
+  delete studentProfile.schoolYear;
+  students[studentIndex] = studentProfile;
   try {
     localStorage.setItem(storageKey, JSON.stringify(students));
     return true;

@@ -15,6 +15,8 @@ import {
 } from 'antd';
 import { ClearOutlined, PlusOutlined, SearchOutlined, UserOutlined } from '@ant-design/icons';
 import { getStudents } from '../../data/students';
+import { getRecords } from '../../data/schoolRecords';
+import { getCurrentSchoolYear, getSchoolYears } from '../../data/schoolYears';
 
 const columns = [
   { title: 'Mã học sinh', dataIndex: 'id', key: 'id', width: 130 },
@@ -38,6 +40,9 @@ const StudentManagement = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [form] = Form.useForm();
   const [validationMessage, setValidationMessage] = useState('');
+  const requestedYear = searchParams.get('schoolYear');
+  const schoolYears = getSchoolYears();
+  const schoolYear = schoolYears.includes(requestedYear) ? requestedYear : getCurrentSchoolYear();
   const searchCriteria = {
     studentId: searchParams.get('studentId') ?? '',
     studentName: searchParams.get('studentName') ?? '',
@@ -47,13 +52,15 @@ const StudentManagement = () => {
   const normalizedStudentName = searchCriteria.studentName.trim().toLocaleLowerCase('vi');
   const hasSearchCriteria = Boolean(normalizedStudentId || normalizedStudentName || searchCriteria.className);
   const matchedStudents = hasSearchCriteria
-    ? getStudents().filter((student) => (
+    ? getStudents(schoolYear).filter((student) => (
       (!normalizedStudentId || student.id.toLocaleLowerCase('vi').includes(normalizedStudentId))
       && (!normalizedStudentName || student.name.toLocaleLowerCase('vi').includes(normalizedStudentName))
       && (!searchCriteria.className || student.className === searchCriteria.className)
     ))
     : null;
-  const classOptions = [...new Set(getStudents().map((student) => student.className))]
+  const classOptions = [...new Set(getRecords('classes')
+    .filter((item) => item.schoolYear === schoolYear)
+    .map((item) => item.name))]
     .sort()
     .map((className) => ({ value: className, label: className }));
 
@@ -70,6 +77,7 @@ const StudentManagement = () => {
 
     setValidationMessage('');
     const nextParams = new URLSearchParams();
+    nextParams.set('schoolYear', schoolYear);
     if (studentId) nextParams.set('studentId', studentId);
     if (studentName) nextParams.set('studentName', studentName);
     if (className) nextParams.set('className', className);
@@ -78,7 +86,7 @@ const StudentManagement = () => {
 
   const handleReset = () => {
     form.setFieldsValue({ studentId: '', studentName: '', className: undefined });
-    setSearchParams({}, { replace: true });
+    setSearchParams({ schoolYear }, { replace: true });
     setValidationMessage('');
   };
 
@@ -99,9 +107,24 @@ const StudentManagement = () => {
             Tra cứu danh sách học sinh theo mã, họ tên hoặc lớp.
           </Typography.Text>
         </div>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/students/new')}>
-          Thêm học sinh
-        </Button>
+        <Space wrap>
+          <Select
+            aria-label="Năm học danh sách học sinh"
+            value={schoolYear}
+            onChange={(value) => setSearchParams({ ...Object.fromEntries(searchParams), schoolYear: value }, { replace: true })}
+            options={schoolYears.map((year) => ({ value: year, label: year }))}
+            style={{ width: 160 }}
+          />
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => navigate(`/students/new?schoolYear=${encodeURIComponent(schoolYear)}`, {
+              state: { returnTo: `${location.pathname}${location.search}` },
+            })}
+          >
+            Thêm học sinh
+          </Button>
+        </Space>
       </div>
 
       <Card title="Điều kiện tìm kiếm" style={{ marginBottom: 24 }}>

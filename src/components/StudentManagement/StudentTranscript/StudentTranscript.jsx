@@ -25,9 +25,9 @@ import {
   getStudentTranscript,
   saveStudentTranscript,
 } from '../../../data/grades';
+import { getCurrentSchoolYear, getSchoolYears } from '../../../data/schoolYears';
 
 const { TextArea } = Input;
-const schoolYears = ['2025-2026', '2026-2027', '2027-2028'];
 const evaluationLevels = ['Tốt', 'Khá', 'Đạt', 'Chưa đạt'];
 
 const formatScore = (score) => (
@@ -42,10 +42,11 @@ const StudentTranscript = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const student = getStudents().find((item) => item.id === studentId);
+  const schoolYears = getSchoolYears();
   const subjects = [...new Set(getRecords('teachers').map((teacher) => teacher.subject).filter(Boolean))].sort();
   const requestedYear = searchParams.get('year');
-  const schoolYear = schoolYears.includes(requestedYear) ? requestedYear : '2026-2027';
+  const schoolYear = schoolYears.includes(requestedYear) ? requestedYear : getCurrentSchoolYear();
+  const student = getStudents(schoolYear).find((item) => item.id === studentId);
   const transcriptKey = `${studentId}|${schoolYear}`;
   const [transcriptDrafts, setTranscriptDrafts] = useState({});
   const transcript = transcriptDrafts[transcriptKey] ?? getStudentTranscript(studentId, schoolYear);

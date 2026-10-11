@@ -1,3 +1,5 @@
+import { getSchoolYearNameById } from './schoolYears';
+
 const recordDefinitions = {
   teachers: {
     title: 'Quản lý giáo viên',
@@ -54,7 +56,7 @@ const recordDefinitions = {
       { name: 'grade', label: 'Khối', required: true },
       { name: 'homeroomTeacher', label: 'Giáo viên chủ nhiệm', required: true },
       { name: 'room', label: 'Phòng học', required: true },
-      { name: 'schoolYear', label: 'Năm học', required: true },
+      { name: 'schoolYear', label: 'Năm học', required: true, type: 'schoolYear' },
       { name: 'capacity', label: 'Sĩ số tối đa', required: true, type: 'number' },
     ],
     columns: [
@@ -77,6 +79,48 @@ const recordDefinitions = {
 };
 
 const storageKey = (type) => `akademi.${type}`;
+let backendClasses = [];
+let classesInitializationPromise;
+
+const normalizeApiClasses = (payload) => {
+  const records = payload?.data?.data ?? payload?.data ?? payload;
+  const flattenRecords = (value) => {
+    if (Array.isArray(value)) return value.flatMap(flattenRecords);
+    if (!value || typeof value !== 'object') return [];
+    if (typeof value.name === 'string' && value.schoolYearId) return [value];
+    return Object.values(value).flatMap(flattenRecords);
+  };
+
+  return flattenRecords(records).map((record) => ({
+    ...record,
+    id: String(record._id ?? record.id ?? ''),
+    schoolYear: record.schoolYear ?? getSchoolYearNameById(record.schoolYearId) ?? '',
+    capacity: String(record.capacity ?? ''),
+  })).filter((record) => record.id && record.name);
+};
+
+export const initializeSchoolRecords = async () => {
+  if (classesInitializationPromise) return classesInitializationPromise;
+
+  classesInitializationPromise = (async () => {
+    const apiUrl = import.meta.env.VITE_CLASSES_API_URL;
+    if (!apiUrl) return getRecords('classes');
+
+    try {
+      const response = await fetch(apiUrl);
+      if (!response.ok) throw new Error(`Classes API returned ${response.status}`);
+      const records = normalizeApiClasses(await response.json());
+      if (!records.length) throw new Error('Classes API returned no valid records');
+      backendClasses = records;
+    } catch (error) {
+      console.error('Could not load classes from API; using local fallback.', error);
+    }
+
+    return getRecords('classes');
+  })();
+
+  return classesInitializationPromise;
+};
 
 export const getRecordDefinition = (type) => recordDefinitions[type];
 
@@ -86,8 +130,11 @@ export const getRecords = (type) => {
 
   try {
     const records = localStorage.getItem(storageKey(type));
-    return records ? JSON.parse(records) : definition.initialRecords;
+    if (records) return JSON.parse(records);
+    if (type === 'classes' && backendClasses.length) return backendClasses;
+    return definition.initialRecords;
   } catch {
+    if (type === 'classes' && backendClasses.length) return backendClasses;
     return definition.initialRecords;
   }
 };
@@ -112,6 +159,11 @@ export const saveRecord = (type, originalId, record) => {
   if (index < 0 || records.some((item) => item.id === record.id && item.id !== originalId)) {
     return false;
   }
+  if (type === 'classes' && records.some((item) => (
+    item.id !== originalId
+    && item.name.toLocaleLowerCase('vi') === record.name.toLocaleLowerCase('vi')
+    && item.schoolYear === record.schoolYear
+  ))) return false;
 
   records[index] = record;
   try {
@@ -125,9 +177,51 @@ export const saveRecord = (type, originalId, record) => {
 export const createRecord = (type, record) => {
   const records = getRecords(type);
   if (!record.id || records.some((item) => item.id === record.id)) return false;
+  if (type === 'classes' && records.some((item) => (
+    item.name.toLocaleLowerCase('vi') === record.name.toLocaleLowerCase('vi')
+    && item.schoolYear === record.schoolYear
+  ))) return false;
 
   try {
     localStorage.setItem(storageKey(type), JSON.stringify([...records, record]));
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const createRecordsBatch = (type, newRecords) => {
+  const definition = recordDefinitions[type];
+  if (!definition || !newRecords.length) return { saved: newRecords.length === 0, records: [] };
+
+  const records = getRecords(type);
+  const ids = new Set(records.map((record) => record.id));
+  const classKeys = new Set(type === 'classes'
+    ? records.map((record) => `${record.schoolYear}|${record.name.toLocaleLowerCase('vi')}`)
+    : []);
+  for (const record of newRecords) {
+    if (!record.id || ids.has(record.id)) return { saved: false, reason: 'duplicate' };
+    ids.add(record.id);
+    if (type === 'classes') {
+      const classKey = `${record.schoolYear}|${record.name.toLocaleLowerCase('vi')}`;
+      if (classKeys.has(classKey)) return { saved: false, reason: 'duplicate' };
+      classKeys.add(classKey);
+    }
+  }
+
+  try {
+    localStorage.setItem(storageKey(type), JSON.stringify([...records, ...newRecords]));
+    return { saved: true, records: newRecords };
+  } catch {
+    return { saved: false, reason: 'storage' };
+  }
+};
+
+export const removeRecordsByIds = (type, idsToRemove) => {
+  const ids = new Set(idsToRemove);
+  const records = getRecords(type);
+  try {
+    localStorage.setItem(storageKey(type), JSON.stringify(records.filter((record) => !ids.has(record.id))));
     return true;
   } catch {
     return false;

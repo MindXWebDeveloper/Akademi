@@ -8,7 +8,6 @@ import {
   Select,
   Space,
   Table,
-  Tag,
   Typography,
 } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
@@ -22,6 +21,7 @@ import {
   getSemesterAverage,
   gradeWeights,
 } from '../../../data/grades';
+import { getCurrentSchoolYear, getSchoolYears } from '../../../data/schoolYears';
 
 const scoreGroups = [
   { key: 'oralScores', label: 'Kiểm tra miệng', countKey: 'oralCount' },
@@ -33,8 +33,6 @@ const fixedScores = [
   { key: 'midtermScore', label: 'Giữa kỳ' },
   { key: 'finalScore', label: 'Cuối kỳ' },
 ];
-
-const schoolYears = ['2025-2026', '2026-2027', '2027-2028'];
 
 const formatScore = (score) => (
   score == null ? 'Chưa đủ điểm' : new Intl.NumberFormat('vi-VN', {
@@ -79,7 +77,7 @@ const StudentReportCard = () => {
   const { studentId } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const student = getStudents().find((item) => item.id === studentId);
+  const schoolYears = getSchoolYears();
   const subjects = [...new Set(getRecords('teachers').map((teacher) => teacher.subject).filter(Boolean))].sort();
   const [subject, setSubject] = useState(() => {
     const requestedSubject = searchParams.get('subject');
@@ -87,8 +85,9 @@ const StudentReportCard = () => {
   });
   const [schoolYear, setSchoolYear] = useState(() => {
     const requestedYear = searchParams.get('year');
-    return schoolYears.includes(requestedYear) ? requestedYear : '2026-2027';
+    return schoolYears.includes(requestedYear) ? requestedYear : getCurrentSchoolYear();
   });
+  const student = getStudents(schoolYear).find((item) => item.id === studentId);
 
   const firstSemester = subject ? getSemesterData(studentId, subject, schoolYear, '1') : null;
   const secondSemester = subject ? getSemesterData(studentId, subject, schoolYear, '2') : null;

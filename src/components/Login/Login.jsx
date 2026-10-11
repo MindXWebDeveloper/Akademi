@@ -235,50 +235,7 @@ const Login = ({ onLogin }) => {
           </Form.Item>
         </Form>
 
-        {/* Quick fill demo credentials hint */}
-        <Alert
-          message={
-            <div style={{ fontSize: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>
-                <strong>Tài khoản thử nghiệm:</strong> admin / password123
-              </span>
-              <Button
-                type="link"
-                size="small"
-                style={{ padding: 0, height: 'auto', fontSize: '12px' }}
-                onClick={() => handleQuickFill('admin', 'password123')}
-              >
-                Điền nhanh
-              </Button>
-            </div>
-          }
-          type="info"
-          showIcon
-          icon={<SafetyCertificateOutlined />}
-          style={{ marginBottom: '20px', borderRadius: '8px', padding: '8px 12px' }}
-        />
-
-        <Divider style={{ margin: '16px 0', fontSize: '12px', color: '#aaa' }}>
-          Hoặc đăng nhập với
-        </Divider>
-
         {/* Social SSO login */}
-        <Space style={{ width: '100%', justifyContent: 'center' }} size="middle">
-          <Button
-            icon={<GoogleOutlined style={{ color: '#ea4335' }} />}
-            onClick={() => message.info('Tính năng đăng nhập Google đang được kết nối')}
-            style={{ borderRadius: '8px' }}
-          >
-            Google
-          </Button>
-          <Button
-            icon={<WindowsOutlined style={{ color: '#00a4ef' }} />}
-            onClick={() => message.info('Tính năng Microsoft 365 Education đang được kết nối')}
-            style={{ borderRadius: '8px' }}
-          >
-            Office 365
-          </Button>
-        </Space>
 
         <div style={{ textAlign: 'center', marginTop: '20px' }}>
           <Text type="secondary" style={{ fontSize: '12px' }}>
