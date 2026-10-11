@@ -27,7 +27,7 @@ const menuItems = [
   { key: 'activities', icon: <VideoCameraOutlined />, label: 'Hoạt động ngoài khóa' },
   { key: 'notices', icon: <BellOutlined />, label: 'Thông báo' },
   { key: 'library', icon: <UserOutlined />, label: 'Thư viện' },
-  { key: 'roles', icon: <UserOutlined />, label: 'Phân quyền' },
+  // { key: 'roles', icon: <UserOutlined />, label: 'Phân quyền' },
   { key: 'logout', icon: <LogoutOutlined />, label: 'Đăng xuất', danger: true },
 ];
 

@@ -58,7 +58,7 @@ const App = () => {
             ? <StudentTranscript profileId={currentUser.studentKey} selfService />
             : <Navigate to="/dashboard" replace />}
         />
-        <Route path="/roles" element={<RoleManagement />} />
+        {/* <Route path="/roles" element={<RoleManagement />} /> */}
         <Route path="/subjects" element={<SubjectManagement />} />
         <Route path="/students" element={<StudentManagement />} />
         <Route path="/students/new" element={<StudentDetail isCreateMode />} />
