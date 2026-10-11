@@ -175,29 +175,6 @@ const Login = ({ onLogin }) => {
             />
           </Form.Item>
 
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '20px',
-            }}
-          >
-            <Form.Item name="remember" valuePropName="checked" noStyle>
-              <Checkbox>Ghi nhớ đăng nhập</Checkbox>
-            </Form.Item>
-            <Link
-              href="#forgot-password"
-              onClick={(e) => {
-                e.preventDefault();
-                message.info('Vui lòng liên hệ quản trị viên để thiết lập lại mật khẩu.');
-              }}
-              style={{ fontSize: '13px', color: '#1890ff' }}
-            >
-              Quên mật khẩu?
-            </Link>
-          </div>
-
           <Form.Item style={{ marginBottom: '16px' }}>
             <Button
               type="primary"
@@ -220,17 +197,6 @@ const Login = ({ onLogin }) => {
             </Button>
           </Form.Item>
         </Form>
-
-        {/* Social SSO login */}
-
-        <div style={{ textAlign: 'center', marginTop: '20px' }}>
-          <Text type="secondary" style={{ fontSize: '12px' }}>
-            Cần hỗ trợ kỹ thuật?{' '}
-            <Link href="#support" onClick={(e) => { e.preventDefault(); message.info('Hotline hỗ trợ: 1900 8888'); }}>
-              Liên hệ IT
-            </Link>
-          </Text>
-        </div>
       </Card>
     </div>
   );

@@ -16,7 +16,7 @@ const renderApp = () => root.render(
 );
 
 const startApp = async () => {
-  root.render(<main className="startup-message" role="status">Connecting to Akademi data services…</main>);
+  root.render(<main className="startup-message" role="status">Connecting to Akademi</main>);
   try {
     await initializeResources();
     renderApp();
