@@ -80,8 +80,8 @@ const LibraryManagement = () => {
     return matchesQuery && matchesAvailability;
   });
 
-  const handleCreateBook = (values) => {
-    const result = createBook({
+  const handleCreateBook = async (values) => {
+    const result = await createBook({
       ...values,
       code: values.code.trim(),
       title: values.title.trim(),
@@ -91,7 +91,7 @@ const LibraryManagement = () => {
     if (!result.saved) {
       message.error(result.reason === 'duplicate'
         ? 'Mã ISBN / mã sách đã tồn tại.'
-        : 'Không thể thêm sách vào kho.');
+        : `Không thể thêm sách vào kho.${result.error ? ` ${result.error.message}` : ''}`);
       return;
     }
     message.success('Đã thêm sách vào kho.');
@@ -105,13 +105,13 @@ const LibraryManagement = () => {
     stockForm.setFieldsValue({ totalQuantity: book.totalQuantity });
   };
 
-  const saveStock = ({ totalQuantity }) => {
-    const result = updateBookStock(bookToAdjust.id, totalQuantity);
+  const saveStock = async ({ totalQuantity }) => {
+    const result = await updateBookStock(bookToAdjust.id, totalQuantity);
     if (!result.saved) {
       if (result.reason === 'below-borrowed') {
         message.error(`Không thể đặt thấp hơn ${result.borrowedQuantity} quyển đang được mượn.`);
       } else {
-        message.error('Không thể cập nhật số lượng sách.');
+        message.error(`Không thể cập nhật số lượng sách.${result.error ? ` ${result.error.message}` : ''}`);
       }
       return;
     }
@@ -126,10 +126,10 @@ const LibraryManagement = () => {
     borrowForm.setFieldsValue({ quantity: 1, dueDate: dateAfterDays(14) });
   };
 
-  const submitBorrow = (values) => {
+  const submitBorrow = async (values) => {
     const student = students.find((item) => item.id === values.studentId);
     if (!student || !bookToBorrow) return;
-    const result = borrowBook({
+    const result = await borrowBook({
       bookId: bookToBorrow.id,
       studentId: student.id,
       studentName: student.name,
@@ -140,7 +140,7 @@ const LibraryManagement = () => {
     if (!result.saved) {
       message.error(result.reason === 'unavailable'
         ? `Chỉ còn ${result.availableQuantity} quyển có thể mượn.`
-        : 'Không thể lập phiếu mượn.');
+        : `Không thể lập phiếu mượn.${result.error ? ` ${result.error.message}` : ''}`);
       refreshData();
       return;
     }
@@ -149,10 +149,10 @@ const LibraryManagement = () => {
     refreshData();
   };
 
-  const returnLoan = (loan) => {
-    const result = returnLoanQuantity(loan.id, loan.remainingQuantity);
+  const returnLoan = async (loan) => {
+    const result = await returnLoanQuantity(loan.id, loan.remainingQuantity);
     if (!result.saved) {
-      message.error('Không thể ghi nhận trả sách.');
+      message.error(`Không thể ghi nhận trả sách.${result.error ? ` ${result.error.message}` : ''}`);
       return;
     }
     message.success(`Đã nhận trả ${loan.remainingQuantity} quyển.`);

@@ -1,29 +1,19 @@
-const storageKey = 'akademi.extracurricular-activities';
+import {
+  createResourceRecord,
+  getResourceRecords,
+  updateResourceRecord,
+} from './apiClient';
 
-const readActivities = () => {
-  try {
-    const activities = JSON.parse(localStorage.getItem(storageKey));
-    return Array.isArray(activities) ? activities : [];
-  } catch {
-    return [];
-  }
-};
-
-const writeActivities = (activities) => {
-  try {
-    localStorage.setItem(storageKey, JSON.stringify(activities));
-    return true;
-  } catch {
-    return false;
-  }
-};
+const readActivities = () => getResourceRecords('activities').map((item) => ({
+  ...item,
+  id: String(item.activityKey ?? item.id ?? item._id ?? ''),
+}));
 
 const nextActivityId = (activities) => {
   const highestId = activities.reduce((highest, activity) => {
     const match = /^HD(\d+)$/.exec(activity.id);
     return match ? Math.max(highest, Number(match[1])) : highest;
   }, 0);
-
   return `HD${String(highestId + 1).padStart(3, '0')}`;
 };
 
@@ -33,66 +23,68 @@ export const getActivities = () => readActivities().sort((left, right) => (
   new Date(left.startAt) - new Date(right.startAt)
 ));
 
-export const getActivityById = (activityId) => (
-  readActivities().find((activity) => activity.id === activityId)
-);
+export const getActivityById = (activityId) => readActivities().find((item) => item.id === activityId);
 
-export const createActivity = (activity) => {
-  const activities = readActivities();
-  const newActivity = {
-    ...activity,
-    id: nextActivityId(activities),
-    participants: emptyParticipants(),
-  };
-
-  return writeActivities([...activities, newActivity]) ? newActivity : null;
+export const createActivity = async (activity) => {
+  try {
+    return await createResourceRecord('activities', {
+      ...activity,
+      id: nextActivityId(readActivities()),
+      participants: emptyParticipants(),
+    });
+  } catch (error) {
+    return { saved: false, reason: 'api', error };
+  }
 };
 
-export const updateActivity = (activityId, updates) => {
-  const activities = readActivities();
-  const activityIndex = activities.findIndex((activity) => activity.id === activityId);
-  if (activityIndex < 0) return false;
-
-  activities[activityIndex] = { ...activities[activityIndex], ...updates };
-  return writeActivities(activities);
+export const updateActivity = async (activityId, updates) => {
+  const activity = readActivities().find((item) => item.id === activityId);
+  if (!activity) return { saved: false, reason: 'not-found' };
+  try {
+    await updateResourceRecord('activities', { ...activity, ...updates });
+    return { saved: true };
+  } catch (error) {
+    return { saved: false, reason: 'api', error };
+  }
 };
 
-export const addActivityParticipants = (activityId, role, entries) => {
-  const activities = readActivities();
-  const activity = activities.find((item) => item.id === activityId);
+export const addActivityParticipants = async (activityId, role, entries) => {
+  const activity = readActivities().find((item) => item.id === activityId);
   if (!activity || !['classes', 'students', 'teachers', 'staff'].includes(role)) {
     return { added: 0, reason: 'not-found' };
   }
-
-  if (role === 'students' && !activity.registrationOpen) {
-    return { added: 0, reason: 'registration-closed' };
-  }
+  if (role === 'students' && !activity.registrationOpen) return { added: 0, reason: 'registration-closed' };
 
   const participants = { ...emptyParticipants(), ...activity.participants };
-  const currentEntries = participants[role];
-  const existingIds = new Set(currentEntries.map((entry) => entry.id));
-  const newEntries = entries.filter((entry) => !existingIds.has(entry.id));
-  const studentCapacity = Number(activity.capacity) || 0;
-  if (role === 'students' && studentCapacity > 0 && currentEntries.length + newEntries.length > studentCapacity) {
+  const current = participants[role];
+  const currentIds = new Set(current.map((entry) => entry.id));
+  const added = entries.filter((entry) => !currentIds.has(entry.id));
+  const capacity = Number(activity.capacity) || 0;
+  if (role === 'students' && capacity > 0 && current.length + added.length > capacity) {
     return { added: 0, reason: 'capacity' };
   }
-
-  if (!newEntries.length) return { added: 0, reason: 'duplicate' };
-  participants[role] = [...currentEntries, ...newEntries];
-  activity.participants = participants;
-
-  return writeActivities(activities)
-    ? { added: newEntries.length }
-    : { added: 0, reason: 'storage' };
+  if (!added.length) return { added: 0, reason: 'duplicate' };
+  participants[role] = [...current, ...added];
+  try {
+    await updateResourceRecord('activities', { ...activity, participants });
+    return { added: added.length };
+  } catch (error) {
+    return { added: 0, reason: 'api', error };
+  }
 };
 
-export const removeActivityParticipant = (activityId, role, participantId) => {
-  const activities = readActivities();
-  const activity = activities.find((item) => item.id === activityId);
-  if (!activity || !activity.participants?.[role]) return false;
-
-  activity.participants[role] = activity.participants[role].filter((participant) => (
-    participant.id !== participantId
-  ));
-  return writeActivities(activities);
+export const removeActivityParticipant = async (activityId, role, participantId) => {
+  const activity = readActivities().find((item) => item.id === activityId);
+  if (!activity?.participants?.[role]) return { saved: false, reason: 'not-found' };
+  const participants = {
+    ...emptyParticipants(),
+    ...activity.participants,
+    [role]: activity.participants[role].filter((item) => item.id !== participantId),
+  };
+  try {
+    await updateResourceRecord('activities', { ...activity, participants });
+    return { saved: true };
+  } catch (error) {
+    return { saved: false, reason: 'api', error };
+  }
 };

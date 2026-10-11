@@ -65,7 +65,7 @@ const NoticeManagement = () => {
     form.resetFields();
   };
 
-  const saveNotice = (values) => {
+  const saveNotice = async (values) => {
     if (values.endDate < values.startDate) {
       form.setFields([{ name: 'endDate', errors: ['Ngày kết thúc phải từ ngày bắt đầu trở đi.'] }]);
       return;
@@ -79,12 +79,12 @@ const NoticeManagement = () => {
       recipient: values.type === 'personal' ? values.recipient?.trim() : '',
       important: Boolean(values.important),
     };
-    const saved = editingNotice
-      ? updateNotice(editingNotice.id, notice)
-      : createNotice(notice);
+    const result = editingNotice
+      ? await updateNotice(editingNotice.id, notice)
+      : await createNotice(notice);
 
-    if (!saved) {
-      message.error('Không thể lưu thông báo. Kiểm tra dung lượng lưu trữ của trình duyệt.');
+    if (result?.saved === false || !result) {
+      message.error(`Không thể lưu thông báo.${result?.error ? ` ${result.error.message}` : ''}`);
       return;
     }
 
@@ -93,9 +93,10 @@ const NoticeManagement = () => {
     refreshNotices();
   };
 
-  const handleDelete = (noticeId) => {
-    if (!deleteNotice(noticeId)) {
-      message.error('Không thể xóa thông báo.');
+  const handleDelete = async (noticeId) => {
+    const result = await deleteNotice(noticeId);
+    if (!result.saved) {
+      message.error(`Không thể xóa thông báo.${result.error ? ` ${result.error.message}` : ''}`);
       return;
     }
     message.success('Đã xóa thông báo.');

@@ -37,8 +37,9 @@ const formatScore = (score) => (
   }).format(score)
 );
 
-const StudentTranscript = () => {
-  const { studentId } = useParams();
+const StudentTranscript = ({ profileId, selfService = false }) => {
+  const { studentId: routeStudentId } = useParams();
+  const studentId = selfService ? profileId : routeStudentId;
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -93,9 +94,10 @@ const StudentTranscript = () => {
     }));
   };
 
-  const handleSave = () => {
-    if (!saveStudentTranscript(studentId, schoolYear, transcript)) {
-      message.error('Không thể lưu thông tin học bạ vào trình duyệt.');
+  const handleSave = async () => {
+    const result = await saveStudentTranscript(studentId, schoolYear, transcript);
+    if (!result.saved) {
+      message.error(`Không thể lưu thông tin học bạ.${result.error ? ` ${result.error.message}` : ''}`);
       return;
     }
     message.success('Đã lưu học lực, hạnh kiểm và nhận xét.');
@@ -116,7 +118,7 @@ const StudentTranscript = () => {
           showIcon
           message="Không tìm thấy học sinh"
           description={`Mã học sinh ${studentId} không tồn tại trong danh sách.`}
-          action={<Button onClick={() => navigate('/students')}>Về danh sách</Button>}
+          action={<Button onClick={() => navigate(selfService ? '/profile' : '/students')}>Về {selfService ? 'hồ sơ cá nhân' : 'danh sách'}</Button>}
         />
       </Card>
     );
@@ -127,10 +129,13 @@ const StudentTranscript = () => {
       <Button
         type="text"
         icon={<ArrowLeftOutlined />}
-        onClick={() => navigate(`/students/${studentId}`, { state: location.state })}
+        onClick={() => navigate(
+          selfService ? '/profile' : `/students/${studentId}`,
+          selfService ? { replace: true } : { state: location.state },
+        )}
         style={{ paddingInline: 0, marginBottom: 16 }}
       >
-        Hồ sơ học sinh
+        {selfService ? 'Thông tin cá nhân' : 'Hồ sơ học sinh'}
       </Button>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
@@ -194,10 +199,16 @@ const StudentTranscript = () => {
 
       <Card
         title="Đánh giá cuối năm"
-        extra={<Button type="primary" icon={<SaveOutlined />} onClick={handleSave}>Lưu đánh giá</Button>}
+        extra={!selfService && <Button type="primary" icon={<SaveOutlined />} onClick={handleSave}>Lưu đánh giá</Button>}
         style={{ marginBottom: 24 }}
       >
-        <Row gutter={[20, 0]}>
+        {selfService ? (
+          <Descriptions bordered size="small" column={1}>
+            <Descriptions.Item label="Học lực">{transcript.academicLevel || 'Chưa cập nhật'}</Descriptions.Item>
+            <Descriptions.Item label="Hạnh kiểm">{transcript.conduct || 'Chưa cập nhật'}</Descriptions.Item>
+            <Descriptions.Item label="Nhận xét của giáo viên chủ nhiệm">{transcript.homeroomComment || 'Chưa có nhận xét'}</Descriptions.Item>
+          </Descriptions>
+        ) : <Row gutter={[20, 0]}>
           <Col xs={24} md={12}>
             <div style={{ marginBottom: 20 }}>
               <Typography.Text strong style={{ display: 'block', marginBottom: 8 }}>Học lực</Typography.Text>
@@ -233,7 +244,7 @@ const StudentTranscript = () => {
               placeholder="Nhập nhận xét cuối năm học"
             />
           </Col>
-        </Row>
+        </Row>}
       </Card>
       <Typography.Text type="secondary">
         Điểm trung bình chung mỗi kỳ chỉ hiển thị khi tất cả môn học có đủ điểm; điểm cả năm tính theo (HK1 + 2 × HK2) / 3.

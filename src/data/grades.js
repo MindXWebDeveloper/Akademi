@@ -1,5 +1,8 @@
-const storageKey = 'akademi.grades';
-const transcriptStorageKey = 'akademi.student-transcripts';
+import {
+  createResourceRecord,
+  getResourceRecords,
+  updateResourceRecord,
+} from './apiClient';
 
 export const gradeWeights = {
   oralScores: 1,
@@ -21,41 +24,36 @@ const makeTranscriptKey = (studentId, schoolYear) => (
   [studentId, schoolYear].map((part) => encodeURIComponent(part)).join('|')
 );
 
-const readStore = () => {
-  try {
-    return JSON.parse(localStorage.getItem(storageKey)) ?? { configs: {}, records: {} };
-  } catch {
-    return { configs: {}, records: {} };
-  }
-};
-
-const writeStore = (store) => {
-  try {
-    localStorage.setItem(storageKey, JSON.stringify(store));
-    return true;
-  } catch {
-    return false;
-  }
-};
+const gradeRows = () => getResourceRecords('grades').map((item) => ({
+  ...item,
+  id: String(item.gradeKey ?? item.id ?? item._id ?? ''),
+}));
 
 export const getGradeConfig = (subject, schoolYear, semester) => {
-  const store = readStore();
-  return store.configs[makeConfigKey(subject, schoolYear, semester)] ?? {
+  const key = makeConfigKey(subject, schoolYear, semester);
+  return gradeRows().find((item) => item.type === 'config' && item.key === key) ?? {
     oralCount: 2,
     shortTestCount: 2,
     onePeriodCount: 1,
   };
 };
 
-export const saveGradeConfig = (subject, schoolYear, semester, config) => {
-  const store = readStore();
-  store.configs[makeConfigKey(subject, schoolYear, semester)] = config;
-  return writeStore(store);
+export const saveGradeConfig = async (subject, schoolYear, semester, config) => {
+  const key = makeConfigKey(subject, schoolYear, semester);
+  const current = gradeRows().find((item) => item.type === 'config' && item.key === key);
+  try {
+    const row = { ...current, ...config, id: current?.id ?? `config|${key}`, type: 'config', key, subject, schoolYear, semester };
+    if (current) await updateResourceRecord('grades', row);
+    else await createResourceRecord('grades', row);
+    return { saved: true };
+  } catch (error) {
+    return { saved: false, reason: 'api', error };
+  }
 };
 
 export const getGradeRecord = (studentId, subject, schoolYear, semester) => {
-  const store = readStore();
-  return store.records[makeRecordKey(studentId, subject, schoolYear, semester)] ?? {
+  const key = makeRecordKey(studentId, subject, schoolYear, semester);
+  return gradeRows().find((item) => item.type === 'record' && item.key === key) ?? {
     oralScores: [],
     shortTestScores: [],
     onePeriodScores: [],
@@ -64,39 +62,38 @@ export const getGradeRecord = (studentId, subject, schoolYear, semester) => {
   };
 };
 
-export const saveGradeRecord = (studentId, subject, schoolYear, semester, record) => {
-  const store = readStore();
-  store.records[makeRecordKey(studentId, subject, schoolYear, semester)] = record;
-  return writeStore(store);
+export const saveGradeRecord = async (studentId, subject, schoolYear, semester, record) => {
+  const key = makeRecordKey(studentId, subject, schoolYear, semester);
+  const current = gradeRows().find((item) => item.type === 'record' && item.key === key);
+  try {
+    const row = { ...current, ...record, id: current?.id ?? `record|${key}`, type: 'record', key, studentId, subject, schoolYear, semester };
+    if (current) await updateResourceRecord('grades', row);
+    else await createResourceRecord('grades', row);
+    return { saved: true };
+  } catch (error) {
+    return { saved: false, reason: 'api', error };
+  }
 };
 
 export const getStudentTranscript = (studentId, schoolYear) => {
-  try {
-    const store = JSON.parse(localStorage.getItem(transcriptStorageKey)) ?? {};
-    return store[makeTranscriptKey(studentId, schoolYear)] ?? {
-      academicLevel: '',
-      conduct: '',
-      homeroomComment: '',
-    };
-  } catch {
-    return { academicLevel: '', conduct: '', homeroomComment: '' };
-  }
+  const key = makeTranscriptKey(studentId, schoolYear);
+  return getResourceRecords('transcripts').find((item) => item.key === key) ?? {
+    academicLevel: '',
+    conduct: '',
+    homeroomComment: '',
+  };
 };
 
-export const saveStudentTranscript = (studentId, schoolYear, transcript) => {
-  let store = {};
+export const saveStudentTranscript = async (studentId, schoolYear, transcript) => {
+  const key = makeTranscriptKey(studentId, schoolYear);
+  const current = getResourceRecords('transcripts').find((item) => item.key === key);
   try {
-    store = JSON.parse(localStorage.getItem(transcriptStorageKey)) ?? {};
-  } catch {
-    store = {};
-  }
-
-  store[makeTranscriptKey(studentId, schoolYear)] = transcript;
-  try {
-    localStorage.setItem(transcriptStorageKey, JSON.stringify(store));
-    return true;
-  } catch {
-    return false;
+    const row = { ...current, ...transcript, id: current?.id ?? key, key, studentId, schoolYear };
+    if (current) await updateResourceRecord('transcripts', row);
+    else await createResourceRecord('transcripts', row);
+    return { saved: true };
+  } catch (error) {
+    return { saved: false, reason: 'api', error };
   }
 };
 

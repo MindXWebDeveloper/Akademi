@@ -6,54 +6,42 @@ import {
   Checkbox,
   Card,
   Typography,
-  Space,
-  Divider,
   Tabs,
-  Alert,
   message,
 } from 'antd';
 import {
   UserOutlined,
   LockOutlined,
-  SafetyCertificateOutlined,
-  GoogleOutlined,
-  WindowsOutlined,
   ArrowRightOutlined,
 } from '@ant-design/icons';
+import { authenticateUser } from '../../data/authentication';
 
 const { Title, Text, Link } = Typography;
 
 const Login = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
-  const [role, setRole] = useState('admin');
+  const [role, setRole] = useState('principal');
   const [form] = Form.useForm();
 
-  const handleFinish = (values) => {
+  const handleFinish = async (values) => {
     setLoading(true);
-    // Simulate authentication delay
-    setTimeout(() => {
-      setLoading(false);
-      message.success('Đăng nhập thành công! Chào mừng đến với Akademi.');
-      if (onLogin) {
-        onLogin({
-          username: values.username,
-          role: role,
-        });
+    try {
+      const user = authenticateUser({ ...values, role });
+      if (!user) {
+        message.error('Thông tin đăng nhập hoặc vai trò không chính xác.');
+        return;
       }
-    }, 800);
-  };
-
-  const handleQuickFill = (username, password) => {
-    form.setFieldsValue({
-      username,
-      password,
-      remember: true,
-    });
-    message.info(`Đã điền thông tin tài khoản mẫu: ${username}`);
+      message.success('Đăng nhập thành công! Chào mừng đến với Akademi.');
+      onLogin?.(user);
+    } catch (error) {
+      message.error(`Không thể xác thực tài khoản. ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const roleTabItems = [
-    { key: 'admin', label: 'Ban Giám Hiệu' },
+    { key: 'principal', label: 'Ban Giám Hiệu' },
     { key: 'teacher', label: 'Giáo Viên' },
     { key: 'student', label: 'Học Sinh / Phụ Huynh' },
   ];
@@ -153,9 +141,7 @@ const Login = ({ onLogin }) => {
           name="loginForm"
           layout="vertical"
           initialValues={{
-            username: 'admin',
-            password: 'password123',
-            remember: true,
+            remember: false,
           }}
           onFinish={handleFinish}
           autoComplete="off"
@@ -171,7 +157,7 @@ const Login = ({ onLogin }) => {
             <Input
               size="large"
               prefix={<UserOutlined style={{ color: '#1890ff', marginRight: '6px' }} />}
-              placeholder="Nhập tài khoản (vd: admin)"
+              placeholder="Nhập tên đăng nhập"
               style={{ borderRadius: '8px' }}
             />
           </Form.Item>

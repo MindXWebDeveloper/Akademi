@@ -116,12 +116,16 @@ const StudentGrades = () => {
     });
   };
 
-  const save = () => {
-    const configSaved = saveGradeConfig(subject, schoolYear, semester, config);
-    const recordSaved = saveGradeRecord(studentId, subject, schoolYear, semester, record);
+  const save = async () => {
+    const configResult = await saveGradeConfig(subject, schoolYear, semester, config);
+    if (!configResult.saved) {
+      message.error(`Không thể lưu cấu hình điểm.${configResult.error ? ` ${configResult.error.message}` : ''}`);
+      return;
+    }
+    const recordResult = await saveGradeRecord(studentId, subject, schoolYear, semester, record);
 
-    if (!configSaved || !recordSaved) {
-      message.error('Không thể lưu điểm. Kiểm tra dung lượng lưu trữ của trình duyệt.');
+    if (!recordResult.saved) {
+      message.error(`Cấu hình đã lưu nhưng điểm số chưa lưu.${recordResult.error ? ` ${recordResult.error.message}` : ''}`);
       return;
     }
 

@@ -18,6 +18,8 @@ import TeacherDetail from './components/TeacherManagement/TeacherDetail/TeacherD
 import ClassManagement from './components/ClassManagement/ClassManagement';
 import ClassDetail from './components/ClassManagement/ClassDetail/ClassDetail';
 import Timetable from './components/Timetable/Timetable';
+import RoleManagement from './components/RoleManagement/RoleManagement';
+import PersonalProfile from './components/PersonalProfile/PersonalProfile';
 
 const App = () => {
   const navigate = useNavigate();
@@ -43,9 +45,19 @@ const App = () => {
         element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login onLogin={handleLogin} />}
       />
       <Route
-        element={isAuthenticated ? <AuthenticatedLayout onLogout={handleLogout} /> : <Navigate to="/" replace />}
+        element={isAuthenticated
+          ? <AuthenticatedLayout onLogout={handleLogout} user={currentUser} />
+          : <Navigate to="/" replace />}
       >
         <Route path="/dashboard" element={<Dashboard user={currentUser} />} />
+        <Route path="/profile" element={<PersonalProfile user={currentUser} />} />
+        <Route
+          path="/my-transcript"
+          element={currentUser?.role === 'student' && currentUser.studentKey
+            ? <StudentTranscript profileId={currentUser.studentKey} selfService />
+            : <Navigate to="/dashboard" replace />}
+        />
+        <Route path="/roles" element={<RoleManagement />} />
         <Route path="/students" element={<StudentManagement />} />
         <Route path="/students/new" element={<StudentDetail isCreateMode />} />
         <Route path="/students/:studentId/grades" element={<StudentGrades />} />

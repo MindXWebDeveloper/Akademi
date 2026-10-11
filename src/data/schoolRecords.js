@@ -1,4 +1,11 @@
-import { getSchoolYearNameById } from './schoolYears';
+import { getSchoolYearIdByName, getSchoolYearNameById } from './schoolYears';
+import {
+  createResourceRecord,
+  deleteResourceRecord,
+  getResourceRecords,
+  updateResourceRecord,
+} from './apiClient';
+import { createLinkedUserAccount, createUsernameFromName } from './userAccounts';
 
 const recordDefinitions = {
   teachers: {
@@ -31,13 +38,6 @@ const recordDefinitions = {
       { title: 'Số điện thoại', dataIndex: 'phone', key: 'phone' },
       { title: 'Email', dataIndex: 'email', key: 'email' },
     ],
-    initialRecords: [
-      { id: 'GV001', name: 'Nguyễn Thu Hà', gender: 'Nữ', birthYear: '1985', subject: 'Toán', qualification: 'Thạc sĩ', phone: '0912345001', email: 'thuha@example.com', address: 'Ba Đình, Hà Nội' },
-      { id: 'GV002', name: 'Trần Quốc Bảo', gender: 'Nam', birthYear: '1981', subject: 'Ngữ văn', qualification: 'Thạc sĩ', phone: '0912345002', email: 'quocbao@example.com', address: 'Cầu Giấy, Hà Nội' },
-      { id: 'GV003', name: 'Lê Minh Trang', gender: 'Nữ', birthYear: '1990', subject: 'Tiếng Anh', qualification: 'Cử nhân', phone: '0912345003', email: 'minhtrang@example.com', address: 'Đống Đa, Hà Nội' },
-      { id: 'GV004', name: 'Phạm Đức Long', gender: 'Nam', birthYear: '1983', subject: 'Vật lý', qualification: 'Thạc sĩ', phone: '0912345004', email: 'duclong@example.com', address: 'Thanh Xuân, Hà Nội' },
-      { id: 'GV005', name: 'Võ Ngọc Mai', gender: 'Nữ', birthYear: '1988', subject: 'Hóa học', qualification: 'Cử nhân', phone: '0912345005', email: 'ngocmai@example.com', address: 'Long Biên, Hà Nội' },
-    ],
   },
   classes: {
     title: 'Quản lý lớp học',
@@ -68,75 +68,28 @@ const recordDefinitions = {
       { title: 'Năm học', dataIndex: 'schoolYear', key: 'schoolYear' },
       { title: 'Sĩ số tối đa', dataIndex: 'capacity', key: 'capacity' },
     ],
-    initialRecords: [
-      { id: 'LH001', name: '10A1', grade: '10', homeroomTeacher: 'Nguyễn Thu Hà', room: 'A101', schoolYear: '2026-2027', capacity: '40' },
-      { id: 'LH002', name: '10A2', grade: '10', homeroomTeacher: 'Trần Quốc Bảo', room: 'A102', schoolYear: '2026-2027', capacity: '40' },
-      { id: 'LH003', name: '11A1', grade: '11', homeroomTeacher: 'Lê Minh Trang', room: 'B101', schoolYear: '2026-2027', capacity: '38' },
-      { id: 'LH004', name: '11A2', grade: '11', homeroomTeacher: 'Phạm Đức Long', room: 'B102', schoolYear: '2026-2027', capacity: '38' },
-      { id: 'LH005', name: '12A1', grade: '12', homeroomTeacher: 'Võ Ngọc Mai', room: 'C101', schoolYear: '2026-2027', capacity: '36' },
-    ],
   },
 };
 
-const storageKey = (type) => `akademi.${type}`;
-let backendClasses = [];
-let classesInitializationPromise;
+const apiResource = (type) => (type === 'classes' ? 'classes' : 'teachers');
 
-const normalizeApiClasses = (payload) => {
-  const records = payload?.data?.data ?? payload?.data ?? payload;
-  const flattenRecords = (value) => {
-    if (Array.isArray(value)) return value.flatMap(flattenRecords);
-    if (!value || typeof value !== 'object') return [];
-    if (typeof value.name === 'string' && value.schoolYearId) return [value];
-    return Object.values(value).flatMap(flattenRecords);
-  };
-
-  return flattenRecords(records).map((record) => ({
-    ...record,
-    id: String(record._id ?? record.id ?? ''),
-    schoolYear: record.schoolYear ?? getSchoolYearNameById(record.schoolYearId) ?? '',
-    capacity: String(record.capacity ?? ''),
-  })).filter((record) => record.id && record.name);
-};
-
-export const initializeSchoolRecords = async () => {
-  if (classesInitializationPromise) return classesInitializationPromise;
-
-  classesInitializationPromise = (async () => {
-    const apiUrl = import.meta.env.VITE_CLASSES_API_URL;
-    if (!apiUrl) return getRecords('classes');
-
-    try {
-      const response = await fetch(apiUrl);
-      if (!response.ok) throw new Error(`Classes API returned ${response.status}`);
-      const records = normalizeApiClasses(await response.json());
-      if (!records.length) throw new Error('Classes API returned no valid records');
-      backendClasses = records;
-    } catch (error) {
-      console.error('Could not load classes from API; using local fallback.', error);
-    }
-
-    return getRecords('classes');
-  })();
-
-  return classesInitializationPromise;
-};
+export const initializeSchoolRecords = async () => getRecords('classes');
 
 export const getRecordDefinition = (type) => recordDefinitions[type];
 
 export const getRecords = (type) => {
   const definition = recordDefinitions[type];
   if (!definition) return [];
-
-  try {
-    const records = localStorage.getItem(storageKey(type));
-    if (records) return JSON.parse(records);
-    if (type === 'classes' && backendClasses.length) return backendClasses;
-    return definition.initialRecords;
-  } catch {
-    if (type === 'classes' && backendClasses.length) return backendClasses;
-    return definition.initialRecords;
-  }
+  return getResourceRecords(apiResource(type)).map((record) => ({
+    ...record,
+    id: String(type === 'classes'
+      ? (record.classKey ?? record._id ?? record.id ?? '')
+      : (record.teacherKey ?? record._id ?? record.id ?? '')),
+    ...(type === 'classes' ? {
+      schoolYear: record.schoolYear ?? getSchoolYearNameById(record.schoolYearId) ?? '',
+      capacity: String(record.capacity ?? ''),
+    } : {}),
+  })).filter((record) => record.id);
 };
 
 export const getRecordById = (type, id) => (
@@ -153,7 +106,17 @@ export const generateRecordId = (type) => {
   return `${definition.idPrefix}${String(highestId + 1).padStart(3, '0')}`;
 };
 
-export const saveRecord = (type, originalId, record) => {
+const apiRecord = (type, record) => {
+  if (type !== 'classes') return record;
+  const schoolYearId = getSchoolYearId(record.schoolYear) ?? record.schoolYearId;
+  return { ...record, ...(schoolYearId ? { schoolYearId } : {}) };
+};
+
+const getSchoolYearId = (schoolYear) => (
+  getSchoolYearIdByName(schoolYear)
+);
+
+export const saveRecord = async (type, originalId, record) => {
   const records = getRecords(type);
   const index = records.findIndex((item) => item.id === originalId);
   if (index < 0 || records.some((item) => item.id === record.id && item.id !== originalId)) {
@@ -165,16 +128,16 @@ export const saveRecord = (type, originalId, record) => {
     && item.schoolYear === record.schoolYear
   ))) return false;
 
-  records[index] = record;
   try {
-    localStorage.setItem(storageKey(type), JSON.stringify(records));
-    return true;
-  } catch {
-    return false;
+    const existing = records[index];
+    await updateResourceRecord(apiResource(type), apiRecord(type, { ...existing, ...record }));
+    return { saved: true };
+  } catch (error) {
+    return { saved: false, reason: 'api', error };
   }
 };
 
-export const createRecord = (type, record) => {
+export const createRecord = async (type, record) => {
   const records = getRecords(type);
   if (!record.id || records.some((item) => item.id === record.id)) return false;
   if (type === 'classes' && records.some((item) => (
@@ -183,14 +146,41 @@ export const createRecord = (type, record) => {
   ))) return false;
 
   try {
-    localStorage.setItem(storageKey(type), JSON.stringify([...records, record]));
-    return true;
-  } catch {
-    return false;
+    const created = await createResourceRecord(apiResource(type), apiRecord(type, record));
+    if (type !== 'teachers') return { saved: true, record: created };
+
+    const username = createUsernameFromName(record.name);
+    try {
+      const account = await createLinkedUserAccount({
+        role: 'teacher',
+        profileKey: record.id,
+        fullName: record.name,
+        username,
+      });
+      return {
+        saved: true,
+        record: created,
+        username: account.username,
+        teacherCode: record.id,
+      };
+    } catch (error) {
+      return {
+        saved: false,
+        reason: 'partial-failure',
+        error,
+        record: created,
+        completed: [{ resource: 'teachers', id: created._id }],
+        remaining: ['users'],
+        username,
+        teacherCode: record.id,
+      };
+    }
+  } catch (error) {
+    return { saved: false, reason: 'api', error };
   }
 };
 
-export const createRecordsBatch = (type, newRecords) => {
+export const createRecordsBatch = async (type, newRecords) => {
   const definition = recordDefinitions[type];
   if (!definition || !newRecords.length) return { saved: newRecords.length === 0, records: [] };
 
@@ -209,21 +199,28 @@ export const createRecordsBatch = (type, newRecords) => {
     }
   }
 
-  try {
-    localStorage.setItem(storageKey(type), JSON.stringify([...records, ...newRecords]));
-    return { saved: true, records: newRecords };
-  } catch {
-    return { saved: false, reason: 'storage' };
+  const created = [];
+  for (const record of newRecords) {
+    try {
+      created.push(await createResourceRecord(apiResource(type), apiRecord(type, record)));
+    } catch (error) {
+      return { saved: false, reason: 'partial-failure', error, records: created };
+    }
   }
+  return { saved: true, records: created };
 };
 
-export const removeRecordsByIds = (type, idsToRemove) => {
+export const removeRecordsByIds = async (type, idsToRemove) => {
   const ids = new Set(idsToRemove);
   const records = getRecords(type);
-  try {
-    localStorage.setItem(storageKey(type), JSON.stringify(records.filter((record) => !ids.has(record.id))));
-    return true;
-  } catch {
-    return false;
+  const removed = [];
+  for (const record of records.filter((item) => ids.has(item.id))) {
+    try {
+      await deleteResourceRecord(apiResource(type), record);
+      removed.push(record.id);
+    } catch (error) {
+      return { removed: false, reason: 'partial-failure', error, completed: removed };
+    }
   }
+  return { removed: true, completed: removed };
 };

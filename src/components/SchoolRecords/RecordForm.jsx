@@ -24,14 +24,15 @@ import {
 } from '../../data/schoolRecords';
 import { getCurrentSchoolYear, getSchoolYears } from '../../data/schoolYears';
 
-const RecordForm = ({ type, isCreateMode = false }) => {
+const RecordForm = ({ type, isCreateMode = false, selfService = false, profileId }) => {
   const definition = getRecordDefinition(type);
   const { recordId } = useParams();
   const navigate = useNavigate();
+  const activeRecordId = selfService ? profileId : recordId;
   const [searchParams] = useSearchParams();
   const requestedYear = searchParams.get('schoolYear') ?? getCurrentSchoolYear();
   const [form] = Form.useForm();
-  const record = isCreateMode ? null : getRecordById(type, recordId);
+  const record = isCreateMode ? null : getRecordById(type, activeRecordId);
   const listRoute = type === 'classes'
     ? `${definition.route}?schoolYear=${record?.schoolYear ?? requestedYear}`
     : definition.route;
@@ -44,11 +45,11 @@ const RecordForm = ({ type, isCreateMode = false }) => {
       return;
     }
 
-    const currentRecord = getRecordById(type, recordId);
+    const currentRecord = getRecordById(type, activeRecordId);
     if (currentRecord) form.setFieldsValue(currentRecord);
-  }, [form, isCreateMode, recordId, requestedYear, type]);
+  }, [activeRecordId, form, isCreateMode, requestedYear, type]);
 
-  const onFinish = (values) => {
+  const onFinish = async (values) => {
     const normalizedRecord = {
       ...values,
       id: values.id.trim(),
@@ -57,19 +58,28 @@ const RecordForm = ({ type, isCreateMode = false }) => {
       ))),
     };
     const saved = isCreateMode
-      ? createRecord(type, normalizedRecord)
-      : saveRecord(type, recordId, normalizedRecord);
+      ? await createRecord(type, normalizedRecord)
+      : await saveRecord(type, activeRecordId, normalizedRecord);
 
-    if (!saved) {
+    if (!saved.saved) {
       message.error(isCreateMode
-        ? `${definition.idLabel} đã tồn tại hoặc không thể lưu.`
-        : `Không thể lưu thông tin ${definition.singular}.`);
+        ? saved.reason === 'partial-failure'
+          ? `Đã tạo hồ sơ giáo viên nhưng chưa tạo được tài khoản Users.${saved.username ? ` Username dự kiến: ${saved.username}; mật khẩu: ${saved.teacherCode}.` : ''} ${saved.error?.message ?? ''}`
+          : `${definition.idLabel} đã tồn tại hoặc không thể lưu.${saved.error ? ` ${saved.error.message}` : ''}`
+        : `Không thể lưu thông tin ${definition.singular}.${saved.error ? ` ${saved.error.message}` : ''}`);
       return;
     }
 
     message.success(isCreateMode
       ? `Đã thêm ${definition.singular}.`
       : `Đã cập nhật ${definition.singular}.`);
+    if (isCreateMode && type === 'teachers') {
+      message.info(`Tài khoản giáo viên: ${saved.username} · Mật khẩu: ${saved.teacherCode}`, 8);
+    }
+    if (selfService) {
+      navigate('/profile', { replace: true });
+      return;
+    }
     navigate(type === 'classes'
       ? `${definition.route}?schoolYear=${normalizedRecord.schoolYear}`
       : definition.route);
@@ -82,8 +92,8 @@ const RecordForm = ({ type, isCreateMode = false }) => {
           type="warning"
           showIcon
           message={`Không tìm thấy ${definition.singular}`}
-          description={`${definition.idLabel} ${recordId} không tồn tại.`}
-          action={<Button onClick={() => navigate(listRoute)}>Về danh sách</Button>}
+          description={`${definition.idLabel} ${activeRecordId} không tồn tại.`}
+          action={<Button onClick={() => navigate(selfService ? '/dashboard' : listRoute)}>Về ${selfService ? 'tổng quan' : 'danh sách'}</Button>}
         />
       </Card>
     );
@@ -91,12 +101,14 @@ const RecordForm = ({ type, isCreateMode = false }) => {
 
   return (
     <div>
-      <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(listRoute)} style={{ paddingInline: 0, marginBottom: 16 }}>
-        Danh sách
-      </Button>
+      {!selfService && (
+        <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(listRoute)} style={{ paddingInline: 0, marginBottom: 16 }}>
+          Danh sách
+        </Button>
+      )}
       <div style={{ marginBottom: 24 }}>
         <Typography.Title level={3} style={{ margin: '0 0 4px' }}>
-          {isCreateMode ? `Thêm ${definition.singular}` : `Thông tin ${definition.singular}`}
+          {selfService ? 'Thông tin cá nhân' : isCreateMode ? `Thêm ${definition.singular}` : `Thông tin ${definition.singular}`}
         </Typography.Title>
         <Typography.Text type="secondary">
           {isCreateMode ? 'Mã được tạo tự động. Nhập thông tin còn lại.' : 'Chỉnh sửa thông tin và lưu thay đổi.'}
@@ -123,7 +135,7 @@ const RecordForm = ({ type, isCreateMode = false }) => {
                 rules.push({
                   validator: (_, value) => {
                     const existing = getRecordById(type, value?.trim());
-                    if (!existing || (!isCreateMode && value?.trim() === recordId)) return Promise.resolve();
+                    if (!existing || (!isCreateMode && value?.trim() === activeRecordId)) return Promise.resolve();
                     return Promise.reject(new Error(`${definition.idLabel} đã được sử dụng.`));
                   },
                 });
@@ -143,7 +155,8 @@ const RecordForm = ({ type, isCreateMode = false }) => {
                         type={field.type === 'email' ? 'email' : 'text'}
                         inputMode={field.type === 'phone' || field.type === 'year' ? 'numeric' : undefined}
                         maxLength={field.name === 'id' ? 30 : 160}
-                        readOnly={(isCreateMode && field.readOnlyOnCreate)
+                        readOnly={selfService && field.name === 'id'
+                          || (isCreateMode && field.readOnlyOnCreate)
                           || (type === 'classes' && field.name === 'schoolYear' && !isCreateMode)}
                       />
                     )}
@@ -156,7 +169,7 @@ const RecordForm = ({ type, isCreateMode = false }) => {
             <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
               {isCreateMode ? `Thêm ${definition.singular}` : 'Lưu thay đổi'}
             </Button>
-            <Button onClick={() => navigate(listRoute)}>Hủy</Button>
+            {!selfService && <Button onClick={() => navigate(listRoute)}>Hủy</Button>}
           </Space>
         </Form>
       </Card>

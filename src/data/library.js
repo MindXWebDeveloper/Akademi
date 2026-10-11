@@ -1,36 +1,25 @@
-const storageKey = 'akademi.library';
+import {
+  createResourceRecord,
+  getResourceRecords,
+  updateResourceRecord,
+} from './apiClient';
 
-const initialBooks = [
-  { id: 'BOOK001', code: '9786042210011', title: 'Dế Mèn phiêu lưu ký', author: 'Tô Hoài', category: 'Văn học', totalQuantity: 12 },
-  { id: 'BOOK002', code: '9786042210028', title: 'Lược sử thời gian', author: 'Stephen Hawking', category: 'Khoa học', totalQuantity: 8 },
-  { id: 'BOOK003', code: '9786042210035', title: 'Tuổi trẻ đáng giá bao nhiêu', author: 'Rosie Nguyễn', category: 'Kỹ năng sống', totalQuantity: 10 },
-];
-
-const readStore = () => {
-  try {
-    const store = JSON.parse(localStorage.getItem(storageKey));
-    if (store && Array.isArray(store.books) && Array.isArray(store.loans)) return store;
-  } catch {
-    return { books: initialBooks, loans: [] };
-  }
-  return { books: initialBooks, loans: [] };
-};
-
-const writeStore = (store) => {
-  try {
-    localStorage.setItem(storageKey, JSON.stringify(store));
-    return true;
-  } catch {
-    return false;
-  }
-};
+const readBooks = () => getResourceRecords('books').map((item) => ({
+  ...item,
+  id: String(item.bookKey ?? item.id ?? item._id ?? ''),
+}));
+const readLoans = () => getResourceRecords('loans').map((item) => ({
+  ...item,
+  id: String(item.loanKey ?? item.id ?? item._id ?? ''),
+}));
 
 const getBorrowedQuantity = (loans, bookId) => loans.reduce((total, loan) => (
   loan.bookId === bookId ? total + Math.max(0, loan.quantity - loan.returnedQuantity) : total
 ), 0);
 
 export const getBooks = () => {
-  const { books, loans } = readStore();
+  const books = readBooks();
+  const loans = readLoans();
   return books.map((book) => {
     const borrowedQuantity = getBorrowedQuantity(loans, book.id);
     return {
@@ -43,45 +32,41 @@ export const getBooks = () => {
 
 export const getBookById = (bookId) => getBooks().find((book) => book.id === bookId);
 
-export const createBook = (book) => {
-  const store = readStore();
+export const createBook = async (book) => {
+  const books = readBooks();
   const normalizedCode = book.code.trim().toLocaleUpperCase('vi');
-  if (store.books.some((item) => item.code.toLocaleUpperCase('vi') === normalizedCode)) {
+  if (books.some((item) => item.code.toLocaleUpperCase('vi') === normalizedCode)) {
     return { saved: false, reason: 'duplicate' };
   }
-
-  const highestId = store.books.reduce((highest, item) => {
+  const highestId = books.reduce((highest, item) => {
     const match = /^BOOK(\d+)$/.exec(item.id);
     return match ? Math.max(highest, Number(match[1])) : highest;
   }, 0);
-  const newBook = {
-    ...book,
-    id: `BOOK${String(highestId + 1).padStart(3, '0')}`,
-    code: normalizedCode,
-  };
-  return writeStore({ ...store, books: [...store.books, newBook] })
-    ? { saved: true, book: newBook }
-    : { saved: false, reason: 'storage' };
+  const newBook = { ...book, id: `BOOK${String(highestId + 1).padStart(3, '0')}`, code: normalizedCode };
+  try {
+    const created = await createResourceRecord('books', newBook);
+    return { saved: true, book: created };
+  } catch (error) {
+    return { saved: false, reason: 'api', error };
+  }
 };
 
-export const updateBookStock = (bookId, totalQuantity) => {
-  const store = readStore();
-  const book = store.books.find((item) => item.id === bookId);
+export const updateBookStock = async (bookId, totalQuantity) => {
+  const book = readBooks().find((item) => item.id === bookId);
   if (!book) return { saved: false, reason: 'not-found' };
-
-  const borrowedQuantity = getBorrowedQuantity(store.loans, bookId);
-  if (totalQuantity < borrowedQuantity) {
-    return { saved: false, reason: 'below-borrowed', borrowedQuantity };
+  const borrowedQuantity = getBorrowedQuantity(readLoans(), bookId);
+  if (totalQuantity < borrowedQuantity) return { saved: false, reason: 'below-borrowed', borrowedQuantity };
+  try {
+    await updateResourceRecord('books', { ...book, totalQuantity });
+    return { saved: true };
+  } catch (error) {
+    return { saved: false, reason: 'api', error };
   }
-
-  book.totalQuantity = totalQuantity;
-  return writeStore(store) ? { saved: true } : { saved: false, reason: 'storage' };
 };
 
 export const getLoans = () => {
-  const { books, loans } = readStore();
-  const booksById = new Map(books.map((book) => [book.id, book]));
-  return loans.map((loan) => ({
+  const booksById = new Map(readBooks().map((book) => [book.id, book]));
+  return readLoans().map((loan) => ({
     ...loan,
     bookTitle: booksById.get(loan.bookId)?.title ?? 'Sách không còn trong danh mục',
     bookCode: booksById.get(loan.bookId)?.code ?? '',
@@ -89,15 +74,13 @@ export const getLoans = () => {
   }));
 };
 
-export const borrowBook = ({ bookId, studentId, studentName, className, quantity, dueDate }) => {
-  const store = readStore();
-  const book = store.books.find((item) => item.id === bookId);
+export const borrowBook = async ({ bookId, studentId, studentName, className, quantity, dueDate }) => {
+  const book = readBooks().find((item) => item.id === bookId);
   if (!book) return { saved: false, reason: 'book-not-found' };
-
-  const availableQuantity = book.totalQuantity - getBorrowedQuantity(store.loans, bookId);
+  const loans = readLoans();
+  const availableQuantity = book.totalQuantity - getBorrowedQuantity(loans, bookId);
   if (quantity > availableQuantity) return { saved: false, reason: 'unavailable', availableQuantity };
-
-  const highestId = store.loans.reduce((highest, loan) => {
+  const highestId = loans.reduce((highest, loan) => {
     const match = /^LOAN(\d+)$/.exec(loan.id);
     return match ? Math.max(highest, Number(match[1])) : highest;
   }, 0);
@@ -112,23 +95,30 @@ export const borrowBook = ({ bookId, studentId, studentName, className, quantity
     borrowedAt: new Date().toISOString(),
     dueDate,
   };
-
-  return writeStore({ ...store, loans: [...store.loans, loan] })
-    ? { saved: true, loan }
-    : { saved: false, reason: 'storage' };
+  try {
+    const created = await createResourceRecord('loans', loan);
+    return { saved: true, loan: created };
+  } catch (error) {
+    return { saved: false, reason: 'api', error };
+  }
 };
 
-export const returnLoanQuantity = (loanId, quantity) => {
-  const store = readStore();
-  const loan = store.loans.find((item) => item.id === loanId);
+export const returnLoanQuantity = async (loanId, quantity) => {
+  const loan = readLoans().find((item) => item.id === loanId);
   if (!loan) return { saved: false, reason: 'not-found' };
-
   const remainingQuantity = loan.quantity - loan.returnedQuantity;
   if (quantity < 1 || quantity > remainingQuantity) {
     return { saved: false, reason: 'invalid-quantity', remainingQuantity };
   }
-
-  loan.returnedQuantity += quantity;
-  loan.returnedAt = loan.returnedQuantity === loan.quantity ? new Date().toISOString() : null;
-  return writeStore(store) ? { saved: true } : { saved: false, reason: 'storage' };
+  const returnedQuantity = loan.returnedQuantity + quantity;
+  try {
+    await updateResourceRecord('loans', {
+      ...loan,
+      returnedQuantity,
+      returnedAt: returnedQuantity === loan.quantity ? new Date().toISOString() : null,
+    });
+    return { saved: true };
+  } catch (error) {
+    return { saved: false, reason: 'api', error };
+  }
 };

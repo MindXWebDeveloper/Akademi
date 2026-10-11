@@ -1,25 +1,15 @@
 import { getStudents, assignStudentEnrollments, getStudentEnrollments } from './students';
-import { createRecordsBatch, getRecords, removeRecordsByIds } from './schoolRecords';
+import { createRecordsBatch, getRecords } from './schoolRecords';
+import {
+  createResourceRecord,
+  getResourceRecords,
+  updateResourceRecord,
+} from './apiClient';
 
-const storageKey = 'akademi.class-promotions';
-
-const readPlans = () => {
-  try {
-    const plans = JSON.parse(localStorage.getItem(storageKey));
-    return Array.isArray(plans) ? plans : [];
-  } catch {
-    return [];
-  }
-};
-
-const writePlans = (plans) => {
-  try {
-    localStorage.setItem(storageKey, JSON.stringify(plans));
-    return true;
-  } catch {
-    return false;
-  }
-};
+const readPlans = () => getResourceRecords('promotionPlans').map((item) => ({
+  ...item,
+  id: String(item.promotionPlanKey ?? item.id ?? item._id ?? ''),
+}));
 
 const parseClassName = (className) => {
   const match = /^(\d+)(.*)$/.exec(className ?? '');
@@ -37,7 +27,7 @@ export const getPromotionPlans = () => readPlans().sort((left, right) => (
 
 export const getPromotionPlan = (planId) => readPlans().find((plan) => plan.id === planId);
 
-export const createPromotionPlan = (sourceYear) => {
+export const createPromotionPlan = async (sourceYear) => {
   const targetYear = nextSchoolYear(sourceYear);
   if (!targetYear) return { saved: false, reason: 'invalid-year' };
 
@@ -101,34 +91,48 @@ export const createPromotionPlan = (sourceYear) => {
     rows,
   };
 
-  return writePlans([...plans, plan])
-    ? { saved: true, plan }
-    : { saved: false, reason: 'storage' };
+  try {
+    const created = await createResourceRecord('promotionPlans', plan);
+    return { saved: true, plan: created };
+  } catch (error) {
+    return { saved: false, reason: 'api', error };
+  }
 };
 
-export const updatePromotionPlanRows = (planId, rows) => {
+export const updatePromotionPlanRows = async (planId, rows) => {
   const plans = readPlans();
   const planIndex = plans.findIndex((plan) => plan.id === planId && plan.status === 'pending');
   if (planIndex < 0) return false;
 
   const originalRows = new Map(plans[planIndex].rows.map((row) => [row.studentId, row]));
   if (rows.length !== originalRows.size || rows.some((row) => !originalRows.has(row.studentId))) return false;
-  plans[planIndex].rows = rows.map((row) => ({ ...originalRows.get(row.studentId), ...row }));
-  return writePlans(plans);
+  const plan = plans[planIndex];
+  const next = { ...plan, rows: rows.map((row) => ({ ...originalRows.get(row.studentId), ...row })) };
+  try {
+    await updateResourceRecord('promotionPlans', next);
+    return { saved: true };
+  } catch (error) {
+    return { saved: false, reason: 'api', error };
+  }
 };
 
-export const rejectPromotionPlan = (planId) => {
-  const plans = readPlans();
-  const plan = plans.find((item) => item.id === planId && item.status === 'pending');
-  if (!plan) return false;
-  plan.status = 'rejected';
-  plan.reviewedAt = new Date().toISOString();
-  return writePlans(plans);
+export const rejectPromotionPlan = async (planId) => {
+  const plan = readPlans().find((item) => item.id === planId && item.status === 'pending');
+  if (!plan) return { saved: false, reason: 'not-pending' };
+  try {
+    await updateResourceRecord('promotionPlans', {
+      ...plan,
+      status: 'rejected',
+      reviewedAt: new Date().toISOString(),
+    });
+    return { saved: true };
+  } catch (error) {
+    return { saved: false, reason: 'api', error };
+  }
 };
 
-export const approvePromotionPlan = (planId) => {
-  const plans = readPlans();
-  const plan = plans.find((item) => item.id === planId && item.status === 'pending');
+export const approvePromotionPlan = async (planId) => {
+  const plan = readPlans().find((item) => item.id === planId && item.status === 'pending');
   if (!plan) return { saved: false, reason: 'not-pending' };
 
   const allClasses = getRecords('classes');
@@ -188,29 +192,59 @@ export const approvePromotionPlan = (planId) => {
     }
   }
 
-  const created = createRecordsBatch('classes', proposedClasses);
-  if (!created.saved) return { saved: false, reason: 'class-storage' };
+  const created = await createRecordsBatch('classes', proposedClasses);
+  if (!created.saved) {
+    return {
+      saved: false,
+      reason: 'partial-failure',
+      stage: 'classes',
+      error: created.error,
+      completed: created.records,
+    };
+  }
+  const createdClassesByName = new Map(created.records.map((item) => [item.name, item]));
 
   const assignments = plan.rows.filter((row) => row.action === 'promote').map((row) => {
     const classId = row.targetClassKey.startsWith('new:')
       ? newIdByName.get(row.targetClassKey.slice(4))
       : row.targetClassKey;
-    const targetClass = targetById.get(classId) ?? proposedClasses.find((item) => item.id === classId);
+    const targetClass = targetById.get(classId)
+      ?? createdClassesByName.get(row.targetClassKey.slice(4))
+      ?? proposedClasses.find((item) => item.id === classId);
     return {
       studentId: row.studentId,
       schoolYear: plan.targetYear,
-      classId: targetClass.id,
+      classId: targetClass._id ?? targetClass.id,
       className: targetClass.name,
     };
   });
-  const assignmentResult = assignStudentEnrollments(assignments);
+  const assignmentResult = await assignStudentEnrollments(assignments);
   if (!assignmentResult.saved) {
-    removeRecordsByIds('classes', proposedClasses.map((item) => item.id));
-    return { saved: false, reason: assignmentResult.reason };
+    return {
+      saved: false,
+      reason: 'partial-failure',
+      stage: 'enrollments',
+      error: assignmentResult.error,
+      completed: assignmentResult.completed,
+      classesCreated: created.records,
+    };
   }
 
-  plan.status = 'approved';
-  plan.reviewedAt = new Date().toISOString();
-  if (!writePlans(plans)) return { saved: false, reason: 'plan-storage' };
+  try {
+    await updateResourceRecord('promotionPlans', {
+      ...plan,
+      status: 'approved',
+      reviewedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    return {
+      saved: false,
+      reason: 'partial-failure',
+      stage: 'plan',
+      error,
+      assignments: assignments.length,
+      classesCreated: created.records.length,
+    };
+  }
   return { saved: true, assignments: assignments.length, classesCreated: proposedClasses.length };
 };

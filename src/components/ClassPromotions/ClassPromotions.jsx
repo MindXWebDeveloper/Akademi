@@ -50,8 +50,8 @@ const ClassPromotions = () => {
   const classes = getRecords('classes');
   const plan = pendingPlans[0];
 
-  const generatePlan = () => {
-    const result = createPromotionPlan(sourceYear);
+  const generatePlan = async () => {
+    const result = await createPromotionPlan(sourceYear);
     if (!result.saved) {
       message.warning(result.reason === 'pending-exists'
         ? 'Đã có phương án chờ duyệt cho năm học này.'
@@ -63,27 +63,29 @@ const ClassPromotions = () => {
     refresh();
   };
 
-  const updateRow = (studentId, updates) => {
+  const updateRow = async (studentId, updates) => {
     const rows = plan.rows.map((row) => (
       row.studentId === studentId ? { ...row, ...updates } : row
     ));
-    if (!updatePromotionPlanRows(plan.id, rows)) {
-      message.error('Không thể lưu chỉnh sửa phương án.');
+    const result = await updatePromotionPlanRows(plan.id, rows);
+    if (!result.saved) {
+      message.error(`Không thể lưu chỉnh sửa phương án.${result.error ? ` ${result.error.message}` : ''}`);
       return;
     }
     refresh();
   };
 
-  const approvePlan = () => {
-    const result = approvePromotionPlan(plan.id);
+  const approvePlan = async () => {
+    const result = await approvePromotionPlan(plan.id);
     if (!result.saved) {
       const errorMessages = {
         capacity: `Lớp ${result.className} vượt sức chứa. Điều chỉnh danh sách trước khi duyệt.`,
         'invalid-target': 'Có học sinh chưa được xếp vào lớp hợp lệ.',
-        'class-storage': 'Không thể tạo danh sách lớp năm học mới.',
-        storage: 'Không thể lưu phân lớp. Vui lòng thử lại.',
       };
-      message.error(errorMessages[result.reason] ?? 'Không thể duyệt phương án.');
+      message.error(errorMessages[result.reason]
+        ?? (result.reason === 'partial-failure'
+          ? `Duyệt phương án chưa hoàn tất tại bước ${result.stage}; một số thay đổi đã được ghi lại. ${result.error?.message ?? ''}`
+          : 'Không thể duyệt phương án.'));
       refresh();
       return;
     }
@@ -91,9 +93,10 @@ const ClassPromotions = () => {
     refresh();
   };
 
-  const rejectPlan = () => {
-    if (!rejectPromotionPlan(plan.id)) {
-      message.error('Không thể từ chối phương án.');
+  const rejectPlan = async () => {
+    const result = await rejectPromotionPlan(plan.id);
+    if (!result.saved) {
+      message.error(`Không thể từ chối phương án.${result.error ? ` ${result.error.message}` : ''}`);
       return;
     }
     message.info('Đã từ chối phương án. Phân lớp chính thức không thay đổi.');
@@ -103,10 +106,10 @@ const ClassPromotions = () => {
   const changeCurrentYear = async (value) => {
     const result = await setCurrentSchoolYear(value);
     if (!result.success) {
-      const description = result.reason?.startsWith('http-')
-        ? `API không cập nhật được năm học (${result.reason.slice(5)}): ${result.detail || 'Không rõ nguyên nhân.'}`
-        : result.reason === 'year-not-in-api'
-          ? 'Năm học này chưa có bản ghi trên API nên không thể đồng bộ.'
+      const description = result.reason === 'partial-failure'
+        ? `Cập nhật năm học chưa hoàn tất; một số bản ghi có thể đã thay đổi. ${result.error?.message ?? ''}`
+        : result.reason === 'year-not-found'
+          ? 'Năm học không tồn tại trên API.'
           : 'Không thể lưu năm học hiện tại.';
       message.error(description);
       return;
@@ -120,15 +123,9 @@ const ClassPromotions = () => {
   const addNextYear = async () => {
     const result = await createNextSchoolYear();
     if (!result.created) {
-      const description = result.reason?.startsWith('http-')
-        ? `API không tạo được năm học (${result.reason.slice(5)}): ${result.detail || 'Không rõ nguyên nhân.'}`
-        : result.reason === 'exists'
+      const description = result.reason === 'exists'
           ? `Năm học ${result.schoolYear} đã tồn tại.`
-          : result.reason === 'missing-api-url'
-            ? 'Chưa cấu hình API năm học.'
-            : result.reason === 'missing-record-id'
-              ? 'API đã nhận yêu cầu nhưng không trả về _id của năm học.'
-              : 'Không thể tạo năm học kế tiếp. Kiểm tra kết nối API.';
+          : result.error?.message ?? 'Không thể tạo năm học kế tiếp. Kiểm tra kết nối API.';
       message.error(description);
       return;
     }

@@ -64,9 +64,9 @@ const ActivityDetail = ({ isCreateMode = false }) => {
     };
 
     if (isCreateMode) {
-      const createdActivity = createActivity(details);
-      if (!createdActivity) {
-        message.error('Không thể lưu hoạt động vào trình duyệt.');
+      const createdActivity = await createActivity(details);
+      if (!createdActivity?.id) {
+        message.error(`Không thể lưu hoạt động.${createdActivity?.error ? ` ${createdActivity.error.message}` : ''}`);
         return;
       }
       message.success('Đã tạo hoạt động.');
@@ -74,22 +74,23 @@ const ActivityDetail = ({ isCreateMode = false }) => {
       return;
     }
 
-    if (!updateActivity(activityId, details)) {
-      message.error('Không thể cập nhật hoạt động.');
+    const result = await updateActivity(activityId, details);
+    if (!result.saved) {
+      message.error(`Không thể cập nhật hoạt động.${result.error ? ` ${result.error.message}` : ''}`);
       return;
     }
     refreshActivity();
     message.success('Đã cập nhật hoạt động.');
   };
 
-  const appendParticipants = (role, entries) => {
-    const result = addActivityParticipants(activityId, role, entries);
+  const appendParticipants = async (role, entries) => {
+    const result = await addActivityParticipants(activityId, role, entries);
     if (result.reason === 'registration-closed') {
       message.warning('Hoạt động hiện không mở đăng ký học sinh.');
     } else if (result.reason === 'capacity') {
       message.warning('Số học sinh vượt quá sức chứa của hoạt động.');
-    } else if (result.reason === 'storage') {
-      message.error('Không thể lưu danh sách tham gia.');
+    } else if (result.reason === 'api') {
+      message.error(`Không thể lưu danh sách tham gia.${result.error ? ` ${result.error.message}` : ''}`);
     } else if (result.reason === 'duplicate') {
       message.info('Những người đã có trong danh sách được bỏ qua.');
     } else if (result.added) {
@@ -98,9 +99,10 @@ const ActivityDetail = ({ isCreateMode = false }) => {
     refreshActivity();
   };
 
-  const removeParticipant = (role, participantId) => {
-    if (!removeActivityParticipant(activityId, role, participantId)) {
-      message.error('Không thể cập nhật danh sách tham gia.');
+  const removeParticipant = async (role, participantId) => {
+    const result = await removeActivityParticipant(activityId, role, participantId);
+    if (!result.saved) {
+      message.error(`Không thể cập nhật danh sách tham gia.${result.error ? ` ${result.error.message}` : ''}`);
       return;
     }
     refreshActivity();

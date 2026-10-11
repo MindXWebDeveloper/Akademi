@@ -16,7 +16,9 @@ import {
   message,
 } from 'antd';
 import { ClearOutlined, EditOutlined, PlusOutlined, SettingOutlined } from '@ant-design/icons';
+import { useOutletContext } from 'react-router-dom';
 import { getRecords } from '../../data/schoolRecords';
+import { getResourceRecords } from '../../data/apiClient';
 import {
   getLessons,
   getTimetableSettings,
@@ -67,7 +69,15 @@ const buildPeriods = (settings) => {
   });
 };
 
+const normalizeRole = (role) => role?.trim().toLocaleLowerCase('vi');
+
+const isPrincipalRole = (role) => (
+  ['principal', 'admin', 'hiệu trưởng', 'ban giám hiệu'].includes(normalizeRole(role))
+);
+
 const Timetable = () => {
+  const { isReadOnly = false } = useOutletContext();
+  const canEdit = !isReadOnly;
   const [viewMode, setViewMode] = useState('class');
   const [selectedId, setSelectedId] = useState();
   const currentSchoolYear = getCurrentSchoolYear();
@@ -84,10 +94,40 @@ const Timetable = () => {
     () => buildPeriods(settings).filter((period) => period.time),
     [settings],
   );
-  const classes = getRecords('classes').filter((item) => item.schoolYear === schoolYear);
   const teachers = getRecords('teachers');
-  const classOptions = classes.map((item) => ({ value: item.name, label: `${item.name} (${item.id})` }));
-  const teacherOptions = teachers.map((item) => ({ value: item.name, label: `${item.name} (${item.id})` }));
+  const teacherIds = new Set(teachers.map((teacher) => teacher.id));
+  const classesByName = new Map();
+  getRecords('classes')
+    .filter((item) => item.schoolYear === schoolYear)
+    .filter((item) => !item.teacherKey && !teacherIds.has(item.id) && !/^TCH-/i.test(item.id))
+    .forEach((item) => {
+      const key = item.name?.trim().toLocaleLowerCase('vi');
+      if (key && !classesByName.has(key)) classesByName.set(key, item);
+    });
+  const classes = [...classesByName.values()];
+  const principalTeacherIds = new Set(
+    getResourceRecords('users')
+      .filter((account) => isPrincipalRole(account.role))
+      .map((account) => account.teacherKey ?? account.TeacherKey)
+      .filter(Boolean)
+      .map(String),
+  );
+  const uniqueTeachers = new Map();
+  teachers
+    .filter((teacher) => (
+      !principalTeacherIds.has(String(teacher.teacherKey ?? teacher.id))
+      && !/hiệu trưởng|ban giám hiệu/i.test(teacher.position ?? '')
+    ))
+    .forEach((teacher) => {
+      const key = String(teacher.teacherKey ?? teacher.id);
+      if (key && !uniqueTeachers.has(key)) uniqueTeachers.set(key, teacher);
+    });
+  const timetableTeachers = [...uniqueTeachers.values()];
+  const classOptions = classes.map((item) => ({ value: item.name, label: item.name }));
+  const teacherOptions = timetableTeachers.map((item) => ({
+    value: item.name,
+    label: `${item.name} (${item.teacherKey ?? item.id})`,
+  }));
   const options = viewMode === 'class'
     ? classOptions
     : teacherOptions;
@@ -118,12 +158,12 @@ const Timetable = () => {
     form.resetFields();
   };
 
-  const handleSaveLesson = (values) => {
-    const result = saveLesson({ ...values, schoolYear }, editingLesson?.id);
+  const handleSaveLesson = async (values) => {
+    const result = await saveLesson({ ...values, schoolYear }, editingLesson?.id);
     if (!result.saved) {
       message.error(result.reason === 'conflict'
         ? 'Lớp hoặc giáo viên đã có lịch ở khung giờ này.'
-        : 'Không thể lưu thời khóa biểu vào trình duyệt.');
+        : `Không thể lưu thời khóa biểu.${result.error ? ` ${result.error.message}` : ''}`);
       return;
     }
 
@@ -169,7 +209,7 @@ const Timetable = () => {
     updatePeriodCount(draftSettings.periodCount + 1);
   };
 
-  const handleSaveSettings = () => {
+  const handleSaveSettings = async () => {
     if (draftSettings.morningPeriods > draftSettings.periodCount) {
       message.error('Số tiết buổi sáng không được vượt tổng số tiết trong ngày.');
       return;
@@ -203,8 +243,9 @@ const Timetable = () => {
       return;
     }
 
-    if (!saveTimetableSettings(draftSettings, schoolYear)) {
-      message.error('Không thể lưu cài đặt thời khóa biểu.');
+    const result = await saveTimetableSettings(draftSettings, schoolYear);
+    if (!result.saved) {
+      message.error(`Không thể lưu cài đặt thời khóa biểu.${result.error ? ` ${result.error.message}` : ''}`);
       return;
     }
 
@@ -240,11 +281,13 @@ const Timetable = () => {
             {viewMode === 'class' ? lesson.teacherName : lesson.className}
           </Typography.Text>
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>Phòng {lesson.room}</Typography.Text>
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openEditModal(lesson)}>
-            Chỉnh sửa
-          </Button>
+          {canEdit && (
+            <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openEditModal(lesson)}>
+              Chỉnh sửa
+            </Button>
+          )}
         </Space>
-      ) : (
+      ) : canEdit ? (
         <Button
           type="text"
           size="small"
@@ -252,7 +295,7 @@ const Timetable = () => {
           aria-label={`Thêm tiết ${row.period.number}, ${day.label}`}
           onClick={() => openCreateModal({ weekday: day.key, period: row.period.number })}
         />
-      ),
+      ) : null,
     })),
   ];
 
@@ -297,7 +340,9 @@ const Timetable = () => {
             options={schoolYears.map((year) => ({ value: year, label: year }))}
             style={{ width: 160 }}
           />
-          <Button icon={<SettingOutlined />} onClick={openSettings}>Cài đặt lịch</Button>
+          {canEdit && (
+            <Button icon={<SettingOutlined />} onClick={openSettings}>Cài đặt lịch</Button>
+          )}
         </Space>
       </div>
 
@@ -339,9 +384,11 @@ const Timetable = () => {
           extra={(
             <Space>
               <Typography.Text type="secondary">Thứ 2 - Thứ 7</Typography.Text>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => openCreateModal()} disabled={!periods.length}>
-                Thêm tiết học
-              </Button>
+              {canEdit && (
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => openCreateModal()} disabled={!periods.length}>
+                  Thêm tiết học
+                </Button>
+              )}
             </Space>
           )}
           styles={{ body: { padding: 0 } }}
@@ -355,12 +402,15 @@ const Timetable = () => {
               scroll={{ x: 1160 }}
             />
           ) : (
-            <Empty description="Chưa có tiết nào được cài giờ. Hãy mở Cài đặt lịch để thêm và cấu hình tiết." />
+            <Empty description={canEdit
+              ? 'Chưa có tiết nào được cài giờ. Hãy mở Cài đặt lịch để thêm và cấu hình tiết.'
+              : 'Chưa có thông tin tiết học cho thời khóa biểu này.'}
+            />
           )}
         </Card>
       )}
 
-      <Modal
+      {canEdit && <Modal
         title={editingLesson ? 'Chỉnh sửa tiết học' : 'Thêm tiết học'}
         open={isModalOpen}
         onCancel={closeModal}
@@ -397,9 +447,9 @@ const Timetable = () => {
             </Form.Item>
           </Space>
         </Form>
-      </Modal>
+      </Modal>}
 
-      <Modal
+      {canEdit && <Modal
         title="Cài đặt thời khóa biểu"
         open={isSettingsOpen}
         onCancel={() => setIsSettingsOpen(false)}
@@ -507,7 +557,7 @@ const Timetable = () => {
             Giờ kết thúc từng tiết được tính từ giờ bắt đầu buổi, thời lượng và giờ nghỉ đã cài đặt.
           </Typography.Text>
         </Space>
-      </Modal>
+      </Modal>}
     </div>
   );
 };

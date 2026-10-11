@@ -3,20 +3,32 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import './main.css'
 import App from './App.jsx'
-import { initializeSchoolYears } from './data/schoolYears.js'
-import { initializeSchoolRecords } from './data/schoolRecords.js'
+import { initializeResources } from './data/apiClient.js'
+
+const root = createRoot(document.getElementById('root'));
+
+const renderApp = () => root.render(
+  <StrictMode>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </StrictMode>,
+);
 
 const startApp = async () => {
-  await initializeSchoolYears();
-  await initializeSchoolRecords();
-
-  createRoot(document.getElementById('root')).render(
-    <StrictMode>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </StrictMode>,
-  );
+  root.render(<main className="startup-message" role="status">Connecting to Akademi data services…</main>);
+  try {
+    await initializeResources();
+    renderApp();
+  } catch (error) {
+    root.render(
+      <main className="startup-message" role="alert">
+        <h1>Unable to load Akademi data</h1>
+        <p>{error.message}</p>
+        <button type="button" onClick={startApp}>Retry</button>
+      </main>,
+    );
+  }
 };
 
 startApp();

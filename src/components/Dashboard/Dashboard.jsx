@@ -24,7 +24,7 @@ const activityData = [
 
 const Dashboard = ({ user }) => {
   const navigate = useNavigate();
-  const displayName = user?.username ? (user.username === 'admin' ? 'Hiệu trưởng' : user.username) : 'Hiệu trưởng';
+  const displayName = user?.displayName ?? (user?.username === 'admin' ? 'Hiệu trưởng' : user?.username) ?? 'Hiệu trưởng';
   const latestNotices = getActiveNotices().slice(0, 3);
 
   return (

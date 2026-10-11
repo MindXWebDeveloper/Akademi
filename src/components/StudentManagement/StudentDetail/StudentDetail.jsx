@@ -32,8 +32,9 @@ const genderOptions = [
   { value: 'Khác', label: 'Khác' },
 ];
 
-const StudentDetail = ({ isCreateMode = false }) => {
+const StudentDetail = ({ isCreateMode = false, selfService = false, profileId }) => {
   const { studentId } = useParams();
+  const activeStudentId = selfService ? profileId : studentId;
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -49,36 +50,44 @@ const StudentDetail = ({ isCreateMode = false }) => {
   const [studentSchoolYear, setStudentSchoolYear] = useState(() => schoolYears.includes(requestedSchoolYear)
     ? requestedSchoolYear
     : getCurrentSchoolYear());
-  const student = isCreateMode ? null : getStudentById(studentId, studentSchoolYear);
+  const student = isCreateMode ? null : getStudentById(activeStudentId, studentSchoolYear);
   const currentYearClasses = getRecords('classes').filter((item) => item.schoolYear === studentSchoolYear);
-  const enrollmentHistory = getStudentEnrollments(studentId)
+  const enrollmentHistory = getStudentEnrollments(activeStudentId)
     .sort((left, right) => right.schoolYear.localeCompare(left.schoolYear));
+  const returnToDashboard = () => navigate('/dashboard', { replace: true });
 
   useEffect(() => {
     if (isCreateMode) {
       form.resetFields();
       form.setFieldsValue({ id: generateStudentId() });
     } else {
-      const currentStudent = getStudentById(studentId, studentSchoolYear);
+      const currentStudent = getStudentById(activeStudentId, studentSchoolYear);
       if (currentStudent) {
         form.setFieldsValue(currentStudent);
       }
     }
-  }, [form, isCreateMode, studentId, studentSchoolYear]);
+  }, [activeStudentId, form, isCreateMode, studentSchoolYear]);
 
-  const handleSave = (values) => {
-    const saved = isCreateMode
-      ? createStudent(values, studentSchoolYear)
-      : saveStudent(studentId, { ...student, ...values });
+  const handleSave = async (values) => {
+    const result = isCreateMode
+      ? await createStudent(values, studentSchoolYear)
+      : await saveStudent(activeStudentId, selfService ? values : { ...student, ...values });
 
-    if (!saved) {
+    if (!result.saved) {
       message.error(isCreateMode
-        ? 'Không thể thêm học sinh. Mã học sinh có thể đã tồn tại.'
-        : 'Không thể lưu thông tin học sinh.');
+        ? `Không thể thêm đầy đủ học sinh. ${result.reason === 'duplicate' ? 'Mã học sinh có thể đã tồn tại.' : result.reason === 'partial-failure' ? `Đã lưu một phần; còn thiếu: ${result.remaining?.join(', ') ?? 'dữ liệu liên quan'}.` : ''} ${result.username ? `Tài khoản ${result.username}, mật khẩu: ${result.studentCode}.` : ''} ${result.error?.message ?? ''}`
+        : `Không thể lưu thông tin học sinh.${result.error ? ` ${result.error.message}` : ''}`);
       return;
     }
 
     message.success(isCreateMode ? 'Đã thêm học sinh.' : 'Đã lưu thông tin học sinh.');
+    if (isCreateMode) {
+      message.info(`Tài khoản học sinh: ${result.username} · Mật khẩu: ${result.studentCode}`, 8);
+    }
+    if (selfService) {
+      navigate('/profile', { replace: true });
+      return;
+    }
     goToList();
   };
 
@@ -89,8 +98,8 @@ const StudentDetail = ({ isCreateMode = false }) => {
           type="warning"
           showIcon
           message="Không tìm thấy học sinh"
-          description={`Mã học sinh ${studentId} không tồn tại trong danh sách.`}
-          action={<Button onClick={goToList}>Về danh sách</Button>}
+          description={`Mã học sinh ${activeStudentId} không tồn tại trong danh sách.`}
+          action={<Button onClick={selfService ? returnToDashboard : goToList}>Về {selfService ? 'tổng quan' : 'danh sách'}</Button>}
         />
       </Card>
     );
@@ -98,19 +107,21 @@ const StudentDetail = ({ isCreateMode = false }) => {
 
   return (
     <div>
-      <Button
-        type="text"
-        icon={<ArrowLeftOutlined />}
-        onClick={goToList}
-        style={{ paddingInline: 0, marginBottom: 16 }}
-      >
-        Danh sách học sinh
-      </Button>
+      {!selfService && (
+        <Button
+          type="text"
+          icon={<ArrowLeftOutlined />}
+          onClick={goToList}
+          style={{ paddingInline: 0, marginBottom: 16 }}
+        >
+          Danh sách học sinh
+        </Button>
+      )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
         <div>
           <Typography.Title level={3} style={{ margin: '0 0 4px' }}>
-            {isCreateMode ? 'Thêm học sinh' : 'Hồ sơ học sinh'}
+            {selfService ? 'Thông tin cá nhân' : isCreateMode ? 'Thêm học sinh' : 'Hồ sơ học sinh'}
           </Typography.Title>
           <Typography.Text type="secondary">
             {isCreateMode
@@ -118,10 +129,18 @@ const StudentDetail = ({ isCreateMode = false }) => {
               : `Năm học ${studentSchoolYear} · Lớp ${student?.className || 'chưa được xếp lớp'}`}
           </Typography.Text>
         </div>
-        {!isCreateMode && (
+        {!isCreateMode && !selfService && (
           <Button
             icon={<ReadOutlined />}
             onClick={() => navigate(`/students/${studentId}/transcript`, { state: location.state })}
+          >
+            Xem học bạ
+          </Button>
+        )}
+        {!isCreateMode && selfService && (
+          <Button
+            icon={<ReadOutlined />}
+            onClick={() => navigate('/my-transcript')}
           >
             Xem học bạ
           </Button>
@@ -139,7 +158,7 @@ const StudentDetail = ({ isCreateMode = false }) => {
                   { required: true, whitespace: true, message: 'Vui lòng nhập mã học sinh.' },
                   {
                     validator: (_, value) => {
-                      if (!value || value.trim() === studentId || !getStudentById(value.trim())) {
+                      if (!value || value.trim() === activeStudentId || !getStudentById(value.trim())) {
                         return Promise.resolve();
                       }
                       return Promise.reject(new Error('Mã học sinh này đã được sử dụng.'));
@@ -147,7 +166,7 @@ const StudentDetail = ({ isCreateMode = false }) => {
                   },
                 ]}
               >
-                <Input maxLength={30} readOnly={isCreateMode} />
+                <Input maxLength={30} readOnly={isCreateMode || selfService} />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
@@ -247,9 +266,7 @@ const StudentDetail = ({ isCreateMode = false }) => {
             <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
               {isCreateMode ? 'Thêm học sinh' : 'Lưu thay đổi'}
             </Button>
-            <Button onClick={goToList}>
-              Hủy
-            </Button>
+            {!selfService && <Button onClick={goToList}>Hủy</Button>}
           </Space>
         </Form>
       </Card>
@@ -285,7 +302,7 @@ const StudentDetail = ({ isCreateMode = false }) => {
           ) : <Typography.Text type="secondary" style={{ display: 'block', padding: 24 }}>Chưa có thông tin phân lớp theo năm học.</Typography.Text>}
         </Card>
       )}
-      {!isCreateMode && <StudentGradeSummary studentId={studentId} />}
+      {!isCreateMode && !selfService && <StudentGradeSummary studentId={activeStudentId} />}
     </div>
   );
 };
