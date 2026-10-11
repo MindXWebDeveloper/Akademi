@@ -2,10 +2,7 @@ import { resourceConfig } from './resourceConfig';
 
 const resources = new Map();
 let initialized = false;
-const configuredUrls = {
-  VITE_CLASSES_API_URL: import.meta.env.VITE_CLASSES_API_URL,
-  VITE_SCHOOL_YEARS_API_URL: import.meta.env.VITE_SCHOOL_YEARS_API_URL,
-};
+let apiConfiguration;
 
 export class ResourceApiError extends Error {
   constructor(message, { status, resource, cause } = {}) {
@@ -16,12 +13,37 @@ export class ResourceApiError extends Error {
   }
 }
 
-const configuredResourceUrl = (resource) => {
+const loadApiConfiguration = async () => {
+  if (apiConfiguration) return apiConfiguration;
+  let response;
+  try {
+    response = await fetch(`${import.meta.env.BASE_URL}api-config.json`, { cache: 'no-store' });
+  } catch (error) {
+    throw new ResourceApiError('Could not load public/api-config.json', { cause: error });
+  }
+  if (!response.ok) {
+    throw new ResourceApiError(`Could not load public/api-config.json (${response.status})`, {
+      status: response.status,
+    });
+  }
+  try {
+    apiConfiguration = await response.json();
+  } catch (error) {
+    throw new ResourceApiError('public/api-config.json is not valid JSON', { cause: error });
+  }
+  return apiConfiguration;
+};
+
+const configuredResourceUrl = (resource, method) => {
   const config = resourceConfig[resource];
   if (!config) throw new ResourceApiError(`Unknown API resource: ${resource}`);
 
-  const variableUrl = config.urlVariable ? configuredUrls[config.urlVariable] : null;
-  const baseUrl = variableUrl || configuredUrls.VITE_CLASSES_API_URL || configuredUrls.VITE_SCHOOL_YEARS_API_URL;
+  const updateUrlKey = method === 'PUT' ? config.updateUrlKey : null;
+  const configuredUrl = (updateUrlKey && apiConfiguration[updateUrlKey])
+    || (config.urlKey && apiConfiguration[config.urlKey])
+    || apiConfiguration.classesUrl
+    || apiConfiguration.schoolYearsUrl;
+  const baseUrl = configuredUrl;
   if (!baseUrl) throw new ResourceApiError(`API URL is not configured for ${config.name}`, { resource });
 
   let parsed;
@@ -31,11 +53,17 @@ const configuredResourceUrl = (resource) => {
     throw new ResourceApiError(`API URL is invalid for ${config.name}`, { resource, cause: error });
   }
 
-  const resourceSegment = parsed.pathname.match(/\/api\/resources(?:\/[^/]+)?\/?$/);
+  const resourceName = encodeURIComponent(config.name);
+  const resourceSegment = updateUrlKey && apiConfiguration[updateUrlKey]
+    ? parsed.pathname.match(new RegExp(`/api/resources/${resourceName}/dataID/?$`, 'i'))
+    : parsed.pathname.match(/\/api\/resources(?:\/[^/]+)?\/?$/);
   if (!resourceSegment) {
-    throw new ResourceApiError(`API URL must point to /api/resources for ${config.name}`, { resource });
+    const expectedPath = updateUrlKey && apiConfiguration[updateUrlKey]
+      ? `/api/resources/${config.name}/dataID`
+      : '/api/resources';
+    throw new ResourceApiError(`API URL must point to ${expectedPath} for ${config.name}`, { resource });
   }
-  parsed.pathname = `${parsed.pathname.slice(0, resourceSegment.index)}/api/resources/${encodeURIComponent(config.name)}`;
+  parsed.pathname = `${parsed.pathname.slice(0, resourceSegment.index)}/api/resources/${resourceName}`;
   parsed.search = new URLSearchParams(parsed.search).toString();
   parsed.hash = '';
   return parsed;
@@ -77,7 +105,7 @@ const responseRecord = (payload) => {
 };
 
 const request = async (resource, method = 'GET', id, body) => {
-  const url = configuredResourceUrl(resource);
+  const url = configuredResourceUrl(resource, method);
   if (id != null) url.pathname = `${url.pathname}/${encodeURIComponent(id)}`;
   const options = { method, headers: {} };
   if (body !== undefined) {
@@ -149,6 +177,7 @@ const ensureInitialized = (resource) => {
 };
 
 export const initializeResources = async () => {
+  await loadApiConfiguration();
   const entries = Object.keys(resourceConfig);
   const results = await Promise.allSettled(entries.map(async (resource) => {
     const records = normalizeCollection(await request(resource));

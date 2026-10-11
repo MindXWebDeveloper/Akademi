@@ -1,0 +1,5 @@
+{
+  "schoolYearsUrl": "https://mindx-mockup-server.vercel.app/api/resources/SchoolYears?apiKey=6aba53f9dc8e5fb4140bc131",
+  "schoolYearsUpdateUrl": "https://mindx-mockup-server.vercel.app/api/resources/SchoolYears/dataID?apiKey=6aba53f9dc8e5fb4140bc131",
+  "classesUrl": "https://mindx-mockup-server.vercel.app/api/resources/Classes?apiKey=6aba53f9dc8e5fb4140bc131"
+}

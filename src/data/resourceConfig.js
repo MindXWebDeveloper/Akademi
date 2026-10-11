@@ -1,8 +1,13 @@
 export const resourceConfig = {
-  schoolYears: { name: 'SchoolYears', keyField: 'schoolYearKey', urlVariable: 'VITE_SCHOOL_YEARS_API_URL' },
+  schoolYears: {
+    name: 'SchoolYears',
+    keyField: 'schoolYearKey',
+    urlKey: 'schoolYearsUrl',
+    updateUrlKey: 'schoolYearsUpdateUrl',
+  },
   roles: { name: 'Roles', keyField: 'roleKey' },
   users: { name: 'Users', keyField: 'accountKey' },
-  classes: { name: 'Classes', keyField: 'classKey', urlVariable: 'VITE_CLASSES_API_URL' },
+  classes: { name: 'Classes', keyField: 'classKey', urlKey: 'classesUrl' },
   teachers: { name: 'Teachers', keyField: 'teacherKey' },
   students: { name: 'Students', keyField: 'studentKey' },
   enrollments: { name: 'StudentEnrollments', keyField: 'enrollmentKey' },
