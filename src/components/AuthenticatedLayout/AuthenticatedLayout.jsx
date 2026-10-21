@@ -1,16 +1,14 @@
 import { useEffect, useState } from 'react';
 import {
   UserOutlined,
-  VideoCameraOutlined,
   BarsOutlined,
-  BellOutlined,
-  SearchOutlined,
   LogoutOutlined,
   BookOutlined,
 } from '@ant-design/icons';
-import { Layout, Menu, theme, Button, Space, Input, message } from 'antd';
+import { Layout, Menu, theme, Button, Space, message } from 'antd';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { getMenuAccess, hideableMenus } from '../../data/roleAccess';
+import './AuthenticatedLayout.css';
 
 const { Header, Content, Footer, Sider } = Layout;
 
@@ -24,9 +22,6 @@ const menuItems = [
   { key: 'teachers-group', icon: <UserOutlined />, label: 'Giáo viên', children: [{ key: 'teachers', label: 'Quản lý giáo viên' }] },
   { key: 'classes-group', icon: <BarsOutlined />, label: 'Lớp học', children: [{ key: 'classes', label: 'Quản lý lớp học' }] },
   { key: 'timetable', icon: <BarsOutlined />, label: 'Thời khóa biểu' },
-  { key: 'activities', icon: <VideoCameraOutlined />, label: 'Hoạt động ngoài khóa' },
-  { key: 'notices', icon: <BellOutlined />, label: 'Thông báo' },
-  { key: 'library', icon: <UserOutlined />, label: 'Thư viện' },
   // { key: 'roles', icon: <UserOutlined />, label: 'Phân quyền' },
   { key: 'logout', icon: <LogoutOutlined />, label: 'Đăng xuất', danger: true },
 ];
@@ -165,6 +160,7 @@ const AuthenticatedLayout = ({ onLogout, user }) => {
   return (
     <Layout style={{ minHeight: '100vh', width: '100%' }}>
       <Sider
+        className="authenticated-sidebar"
         breakpoint="lg"
         collapsedWidth="0"
         theme="light"
@@ -185,15 +181,9 @@ const AuthenticatedLayout = ({ onLogout, user }) => {
           onClick={handleMenuClick}
         />
       </Sider>
-      <Layout style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        <Header style={{ padding: '0 24px', background: colorBgContainer, display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-          <Input
-            placeholder="Tìm kiếm thông tin học sinh, lớp học..."
-            prefix={<SearchOutlined style={{ color: '#aaa' }} />}
-            style={{ width: '320px', borderRadius: '6px' }}
-          />
+      <Layout className="authenticated-main-layout" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        <Header className="authenticated-header" style={{ padding: '0 24px', background: colorBgContainer, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
           <Space size="middle">
-            <BellOutlined style={{ fontSize: '18px', cursor: 'pointer', color: '#666' }} />
             <Button
               type="text"
               aria-label="Thông tin cá nhân"
@@ -201,20 +191,6 @@ const AuthenticatedLayout = ({ onLogout, user }) => {
               icon={<UserOutlined style={{ fontSize: '18px', color: '#666' }} />}
               onClick={() => navigate('/profile', { replace: true })}
             />
-            {onLogout && (
-              <Button
-                type="dashed"
-                danger
-                size="small"
-                icon={<LogoutOutlined />}
-                onClick={() => {
-                  message.info('Đã đăng xuất');
-                  onLogout();
-                }}
-              >
-                Đăng xuất
-              </Button>
-            )}
           </Space>
         </Header>
         <Content style={{ flex: '1', overflow: 'auto', padding: '24px', background: '#f5f5f5' }}>

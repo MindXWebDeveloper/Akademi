@@ -1,0 +1,26 @@
+.authenticated-sidebar {
+  position: fixed !important;
+  inset-block: 0;
+  left: 0;
+  height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.authenticated-main-layout {
+  min-width: 0;
+}
+
+.authenticated-header {
+  position: sticky;
+  top: 0;
+  z-index: 9;
+}
+
+@media (min-width: 992px) {
+  .authenticated-main-layout {
+    flex: 0 0 calc(100% - 200px);
+    margin-left: 200px;
+  }
+}
