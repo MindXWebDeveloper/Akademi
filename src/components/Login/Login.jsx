@@ -148,10 +148,10 @@ const Login = ({ onLogin }) => {
           requiredMark={false}
         >
           <Form.Item
-            label="Tên đăng nhập hoặc Email"
+            label="Tên đăng nhập"
             name="username"
             rules={[
-              { required: true, message: 'Vui lòng nhập tên đăng nhập hoặc email!' },
+              { required: true, message: 'Vui lòng nhập tên đăng nhập!' },
             ]}
           >
             <Input
