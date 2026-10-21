@@ -15,12 +15,18 @@
 .authenticated-header {
   position: sticky;
   top: 0;
-  z-index: 9;
+  z-index: 11;
 }
 
 @media (min-width: 992px) {
   .authenticated-main-layout {
     flex: 0 0 calc(100% - 200px);
     margin-left: 200px;
+  }
+}
+
+@media (max-width: 991px) {
+  .authenticated-sidebar .ant-layout-sider-zero-width-trigger {
+    display: none;
   }
 }

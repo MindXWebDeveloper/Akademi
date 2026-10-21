@@ -6,6 +6,7 @@ import {
 import { getRecords } from './schoolRecords';
 import { getCurrentSchoolYear } from './schoolYears';
 import { createLinkedUserAccount, createUsernameFromName } from './userAccounts';
+import { hasDuplicatePersonProfile } from './recordValidation';
 
 const studentRecords = () => getResourceRecords('students').map((student) => ({
   ...student,
@@ -80,6 +81,9 @@ export const createStudent = async (newStudent, schoolYear = getCurrentSchoolYea
   if (!studentId || students.some((student) => student.id === studentId)) {
     return { saved: false, reason: 'duplicate' };
   }
+  if (hasDuplicatePersonProfile(students, newStudent)) {
+    return { saved: false, reason: 'duplicate-profile' };
+  }
 
   const profile = { ...newStudent, id: studentId, status: 'Đang học' };
   delete profile.classId;
@@ -151,11 +155,11 @@ export const createStudent = async (newStudent, schoolYear = getCurrentSchoolYea
 export const saveStudent = async (originalStudentId, updatedStudent) => {
   const existing = studentRecords().find((student) => student.id === originalStudentId);
   if (!existing) return { saved: false, reason: 'not-found' };
-  if (studentRecords().some((student) => student.id === updatedStudent.id && student.id !== originalStudentId)) {
-    return { saved: false, reason: 'duplicate' };
+  if (hasDuplicatePersonProfile(studentRecords(), updatedStudent, originalStudentId)) {
+    return { saved: false, reason: 'duplicate-profile' };
   }
 
-  const profile = { ...existing, ...updatedStudent };
+  const profile = { ...existing, ...updatedStudent, id: originalStudentId };
   delete profile.classId;
   delete profile.schoolYear;
   try {

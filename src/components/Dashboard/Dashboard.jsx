@@ -6,6 +6,9 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { Row, Col, Card, Statistic, Button, Table, Tag, Space, Empty, Typography } from 'antd';
 import { getActiveNotices } from '../../data/notices';
+import { getStudents } from '../../data/students';
+import { getCurrentSchoolYear } from '../../data/schoolYears';
+import { getRecords } from '../../data/schoolRecords';
 
 const chartData = [
   { month: 'Tháng 12', value: 1000 },
@@ -26,6 +29,12 @@ const Dashboard = ({ user }) => {
   const navigate = useNavigate();
   const displayName = user?.displayName ?? (user?.username === 'admin' ? 'Hiệu trưởng' : user?.username) ?? 'Hiệu trưởng';
   const latestNotices = getActiveNotices().slice(0, 3);
+  const schoolYear = getCurrentSchoolYear();
+  const studentCount = getStudents(schoolYear).length;
+  const teacherCount = getRecords('teachers').length;
+  const classCount = getRecords('classes')
+    .filter((schoolClass) => schoolClass.schoolYear === schoolYear)
+    .length;
 
   return (
     <>
@@ -41,10 +50,9 @@ const Dashboard = ({ user }) => {
               <Card hoverable style={{ borderRadius: '8px' }}>
                 <Statistic
                   title="Học sinh"
-                  value={1248}
+                  value={studentCount}
                   prefix={<UserOutlined />}
                   valueStyle={{ color: '#1890ff' }}
-                  suffix={<span style={{ fontSize: '12px', color: '#52c41a' }}>↑ 12 so với tháng trước</span>}
                 />
               </Card>
             </Col>
@@ -52,10 +60,9 @@ const Dashboard = ({ user }) => {
               <Card hoverable style={{ borderRadius: '8px' }}>
                 <Statistic
                   title="Giáo viên"
-                  value={96}
+                  value={teacherCount}
                   prefix={<UserOutlined />}
                   valueStyle={{ color: '#52c41a' }}
-                  suffix={<span style={{ fontSize: '12px', color: '#52c41a' }}>↑ 5 so với tháng trước</span>}
                 />
               </Card>
             </Col>
@@ -63,10 +70,9 @@ const Dashboard = ({ user }) => {
               <Card hoverable style={{ borderRadius: '8px' }}>
                 <Statistic
                   title="Lớp học"
-                  value={36}
+                  value={classCount}
                   prefix={<BarsOutlined />}
                   valueStyle={{ color: '#722ed1' }}
-                  suffix={<span style={{ fontSize: '12px', color: '#52c41a' }}>↑ 2 so với tháng trước</span>}
                 />
               </Card>
             </Col>
@@ -145,42 +151,6 @@ const Dashboard = ({ user }) => {
               </Card>
             </Col>
           </Row>
-
-          {/* Quick Access */}
-          <Card title="Truy cập nhanh" style={{ marginBottom: '24px', borderRadius: '8px' }}>
-            <Row gutter={[16, 16]}>
-              <Col xs={12} sm={8} md={4}>
-                <Button type="dashed" block icon={<UserOutlined />} style={{ height: 'auto', padding: '16px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', borderRadius: '8px' }}>
-                  <span>Quản lý học sinh</span>
-                </Button>
-              </Col>
-              <Col xs={12} sm={8} md={4}>
-                <Button type="dashed" block icon={<UserOutlined />} style={{ height: 'auto', padding: '16px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', borderRadius: '8px' }}>
-                  <span>Quản lý giáo viên</span>
-                </Button>
-              </Col>
-              <Col xs={12} sm={8} md={4}>
-                <Button type="dashed" block icon={<BarsOutlined />} style={{ height: 'auto', padding: '16px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', borderRadius: '8px' }}>
-                  <span>Quản lý lớp học</span>
-                </Button>
-              </Col>
-              <Col xs={12} sm={8} md={4}>
-                <Button type="dashed" block icon={<BarsOutlined />} style={{ height: 'auto', padding: '16px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', borderRadius: '8px' }}>
-                  <span>Thời khóa biểu</span>
-                </Button>
-              </Col>
-              <Col xs={12} sm={8} md={4}>
-                <Button type="dashed" block icon={<BarsOutlined />} style={{ height: 'auto', padding: '16px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', borderRadius: '8px' }}>
-                  <span>Báo cáo</span>
-                </Button>
-              </Col>
-              <Col xs={12} sm={8} md={4}>
-                <Button type="dashed" block icon={<BellOutlined />} style={{ height: 'auto', padding: '16px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', borderRadius: '8px' }}>
-                  <span>Thông báo</span>
-                </Button>
-              </Col>
-            </Row>
-          </Card>
 
           {/* Activity Log */}
           <Card title="Lịch hoạt động sắp tới" extra={<a href="#all-activities" style={{ color: '#1890ff' }}>Xem tất cả</a>} style={{ borderRadius: '8px' }}>

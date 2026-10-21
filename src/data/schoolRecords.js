@@ -7,6 +7,7 @@ import {
 } from './apiClient';
 import { createLinkedUserAccount, createUsernameFromName } from './userAccounts';
 import { getTeacherSubjectKeys, getTeacherSubjectNames } from './subjects';
+import { hasDuplicatePersonProfile, normalizeRecordName } from './recordValidation';
 
 const recordDefinitions = {
   teachers: {
@@ -124,14 +125,16 @@ const getSchoolYearId = (schoolYear) => (
 export const saveRecord = async (type, originalId, record) => {
   const records = getRecords(type);
   const index = records.findIndex((item) => item.id === originalId);
-  if (index < 0 || records.some((item) => item.id === record.id && item.id !== originalId)) {
-    return false;
+  if (index < 0) return { saved: false, reason: 'not-found' };
+  if (records.some((item) => item.id === record.id && item.id !== originalId)) {
+    return { saved: false, reason: 'duplicate-id' };
   }
   if (type === 'classes' && records.some((item) => (
-    item.id !== originalId
-    && item.name.toLocaleLowerCase('vi') === record.name.toLocaleLowerCase('vi')
-    && item.schoolYear === record.schoolYear
-  ))) return false;
+    item.id !== originalId && normalizeRecordName(item.name) === normalizeRecordName(record.name)
+  ))) return { saved: false, reason: 'duplicate-name' };
+  if (type === 'teachers' && hasDuplicatePersonProfile(records, record, originalId)) {
+    return { saved: false, reason: 'duplicate-profile' };
+  }
 
   try {
     const existing = records[index];
@@ -146,9 +149,11 @@ export const createRecord = async (type, record) => {
   const records = getRecords(type);
   if (!record.id || records.some((item) => item.id === record.id)) return false;
   if (type === 'classes' && records.some((item) => (
-    item.name.toLocaleLowerCase('vi') === record.name.toLocaleLowerCase('vi')
-    && item.schoolYear === record.schoolYear
-  ))) return false;
+    normalizeRecordName(item.name) === normalizeRecordName(record.name)
+  ))) return { saved: false, reason: 'duplicate-name' };
+  if (type === 'teachers' && hasDuplicatePersonProfile(records, record)) {
+    return { saved: false, reason: 'duplicate-profile' };
+  }
 
   try {
     const created = await createResourceRecord(apiResource(type), apiRecord(type, record));
@@ -192,13 +197,13 @@ export const createRecordsBatch = async (type, newRecords) => {
   const records = getRecords(type);
   const ids = new Set(records.map((record) => record.id));
   const classKeys = new Set(type === 'classes'
-    ? records.map((record) => `${record.schoolYear}|${record.name.toLocaleLowerCase('vi')}`)
+    ? records.map((record) => normalizeRecordName(record.name))
     : []);
   for (const record of newRecords) {
     if (!record.id || ids.has(record.id)) return { saved: false, reason: 'duplicate' };
     ids.add(record.id);
     if (type === 'classes') {
-      const classKey = `${record.schoolYear}|${record.name.toLocaleLowerCase('vi')}`;
+      const classKey = normalizeRecordName(record.name);
       if (classKeys.has(classKey)) return { saved: false, reason: 'duplicate' };
       classKeys.add(classKey);
     }

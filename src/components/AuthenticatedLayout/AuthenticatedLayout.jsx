@@ -105,6 +105,7 @@ const AuthenticatedLayout = ({ onLogout, user }) => {
                       ? 'roles'
                       : 'dashboard';
   const [isMobile, setIsMobile] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [openKeys, setOpenKeys] = useState([]);
   const {
     token: { colorBgContainer },
@@ -163,9 +164,12 @@ const AuthenticatedLayout = ({ onLogout, user }) => {
         className="authenticated-sidebar"
         breakpoint="lg"
         collapsedWidth="0"
+        collapsed={isMobile && isSidebarCollapsed}
         theme="light"
+        onCollapse={(collapsed) => setIsSidebarCollapsed(collapsed)}
         onBreakpoint={(broken) => {
           setIsMobile(broken);
+          setIsSidebarCollapsed(broken);
           if (broken) setOpenKeys([]);
         }}
       >
@@ -184,6 +188,15 @@ const AuthenticatedLayout = ({ onLogout, user }) => {
       <Layout className="authenticated-main-layout" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         <Header className="authenticated-header" style={{ padding: '0 24px', background: colorBgContainer, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
           <Space size="middle">
+            {isMobile && (
+              <Button
+                type="text"
+                aria-label={isSidebarCollapsed ? 'Mở menu' : 'Đóng menu'}
+                title={isSidebarCollapsed ? 'Mở menu' : 'Đóng menu'}
+                icon={<BarsOutlined style={{ fontSize: '18px', color: '#666' }} />}
+                onClick={() => setIsSidebarCollapsed((collapsed) => !collapsed)}
+              />
+            )}
             <Button
               type="text"
               aria-label="Thông tin cá nhân"

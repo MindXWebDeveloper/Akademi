@@ -1,0 +1,42 @@
+[
+  {
+    "name": "10A1",
+    "grade": "10",
+    "homeroomTeacher": "Nguyễn Thu Hà",
+    "room": "A101",
+    "schoolYearId": "6aba5fdd6b4ab527f4a8e8ff",
+    "capacity": "40"
+  },
+  {
+    "name": "10A2",
+    "grade": "10",
+    "homeroomTeacher": "Trần Quốc Bảo",
+    "room": "A102",
+    "schoolYearId": "6aba5fdd6b4ab527f4a8e8ff",
+    "capacity": "40"
+  },
+  {
+    "name": "11A1",
+    "grade": "11",
+    "homeroomTeacher": "Lê Minh Trang",
+    "room": "B101",
+    "schoolYearId": "6aba5fdd6b4ab527f4a8e8ff",
+    "capacity": "38"
+  },
+  {
+    "name": "11A2",
+    "grade": "11",
+    "homeroomTeacher": "Phạm Đức Long",
+    "room": "B102",
+    "schoolYearId": "6aba5fdd6b4ab527f4a8e8ff",
+    "capacity": "38"
+  },
+  {
+    "name": "12A1",
+    "grade": "12",
+    "homeroomTeacher": "Võ Ngọc Mai",
+    "room": "C101",
+    "schoolYearId": "6aba5fdd6b4ab527f4a8e8ff",
+    "capacity": "36"
+  }
+]

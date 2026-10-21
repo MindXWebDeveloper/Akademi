@@ -25,6 +25,7 @@ import {
 import { getRecords } from '../../../data/schoolRecords';
 import { getCurrentSchoolYear, getSchoolYears } from '../../../data/schoolYears';
 import StudentGradeSummary from '../StudentGradeSummary';
+import { phoneNumberPattern, phoneNumberValidationMessage } from '../../../utils/validation';
 
 const genderOptions = [
   { value: 'Nam', label: 'Nam' },
@@ -75,8 +76,8 @@ const StudentDetail = ({ isCreateMode = false, selfService = false, profileId })
 
     if (!result.saved) {
       message.error(isCreateMode
-        ? `Không thể thêm đầy đủ học sinh. ${result.reason === 'duplicate' ? 'Mã học sinh có thể đã tồn tại.' : result.reason === 'partial-failure' ? `Đã lưu một phần; còn thiếu: ${result.remaining?.join(', ') ?? 'dữ liệu liên quan'}.` : ''} ${result.username ? `Tài khoản ${result.username}, mật khẩu: ${result.studentCode}.` : ''} ${result.error?.message ?? ''}`
-        : `Không thể lưu thông tin học sinh.${result.error ? ` ${result.error.message}` : ''}`);
+        ? `Không thể thêm đầy đủ học sinh. ${result.reason === 'duplicate' ? 'Mã học sinh có thể đã tồn tại.' : result.reason === 'duplicate-profile' ? 'Học sinh có cùng họ tên, năm sinh, giới tính và địa chỉ đã tồn tại.' : result.reason === 'partial-failure' ? `Đã lưu một phần; còn thiếu: ${result.remaining?.join(', ') ?? 'dữ liệu liên quan'}.` : ''} ${result.username ? `Tài khoản ${result.username}, mật khẩu: ${result.studentCode}.` : ''} ${result.error?.message ?? ''}`
+        : `Không thể lưu thông tin học sinh.${result.reason === 'duplicate-profile' ? ' Học sinh có cùng họ tên, năm sinh, giới tính và địa chỉ đã tồn tại.' : ''}${result.error ? ` ${result.error.message}` : ''}`);
       return;
     }
 
@@ -166,7 +167,7 @@ const StudentDetail = ({ isCreateMode = false, selfService = false, profileId })
                   },
                 ]}
               >
-                <Input maxLength={30} readOnly={isCreateMode || selfService} />
+                <Input maxLength={30} readOnly />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
@@ -228,10 +229,10 @@ const StudentDetail = ({ isCreateMode = false, selfService = false, profileId })
                 name="phone"
                 rules={[
                   { required: true, message: 'Vui lòng nhập số điện thoại.' },
-                  { pattern: /^[0-9+\s().-]{8,20}$/, message: 'Số điện thoại chưa hợp lệ.' },
+                  { pattern: phoneNumberPattern, message: phoneNumberValidationMessage },
                 ]}
               >
-                <Input inputMode="tel" maxLength={20} />
+                <Input inputMode="numeric" maxLength={10} />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>

@@ -25,6 +25,7 @@ import {
 import { getCurrentSchoolYear, getSchoolYears } from '../../data/schoolYears';
 import { getSubjects } from '../../data/subjects';
 import { getResourceRecords } from '../../data/apiClient';
+import { phoneNumberPattern, phoneNumberValidationMessage } from '../../utils/validation';
 
 const isPrincipalTeacher = (teacher) => (
   teacher?.position?.toLocaleLowerCase('vi').includes('hiệu trưởng')
@@ -78,11 +79,16 @@ const RecordForm = ({ type, isCreateMode = false, selfService = false, profileId
       : await saveRecord(type, activeRecordId, normalizedRecord);
 
     if (!saved.saved) {
+      const duplicateMessage = saved.reason === 'duplicate-profile'
+        ? 'Đã tồn tại hồ sơ có cùng họ tên, năm sinh, giới tính và địa chỉ.'
+        : saved.reason === 'duplicate-name'
+          ? 'Tên lớp này đã tồn tại.'
+          : null;
       message.error(isCreateMode
         ? saved.reason === 'partial-failure'
           ? `Đã tạo hồ sơ giáo viên nhưng chưa tạo được tài khoản Users.${saved.username ? ` Username dự kiến: ${saved.username}; mật khẩu: ${saved.teacherCode}.` : ''} ${saved.error?.message ?? ''}`
-          : `${definition.idLabel} đã tồn tại hoặc không thể lưu.${saved.error ? ` ${saved.error.message}` : ''}`
-        : `Không thể lưu thông tin ${definition.singular}.${saved.error ? ` ${saved.error.message}` : ''}`);
+          : `${duplicateMessage ?? `${definition.idLabel} đã tồn tại hoặc không thể lưu.`}${saved.error ? ` ${saved.error.message}` : ''}`
+        : `${duplicateMessage ?? `Không thể lưu thông tin ${definition.singular}.`}${saved.error ? ` ${saved.error.message}` : ''}`);
       return;
     }
 
@@ -135,8 +141,11 @@ const RecordForm = ({ type, isCreateMode = false, selfService = false, profileId
         <Form form={form} layout="vertical" onFinish={onFinish}>
           <Row gutter={[20, 0]}>
             {visibleFields.map((field) => {
+              const requiredMessage = `Vui lòng nhập ${field.label.toLocaleLowerCase('vi')}.`;
               const rules = field.required
-                ? [{ required: true, whitespace: field.type !== 'number', message: `Vui lòng nhập ${field.label.toLocaleLowerCase('vi')}.` }]
+                ? [field.type === 'number'
+                  ? { required: true, type: 'integer', min: 1, message: requiredMessage }
+                  : { required: true, whitespace: true, message: requiredMessage }]
                 : [];
               if (field.type === 'subjects') {
                 rules.splice(0, rules.length, { required: true, type: 'array', min: 1, message: 'Chọn ít nhất một môn giảng dạy.' });
@@ -145,7 +154,7 @@ const RecordForm = ({ type, isCreateMode = false, selfService = false, profileId
                 rules.push({ pattern: /^\d{4}$/, message: 'Năm phải gồm 4 chữ số.' });
               }
               if (field.type === 'phone') {
-                rules.push({ pattern: /^[0-9+\s().-]{8,20}$/, message: 'Số điện thoại chưa hợp lệ.' });
+                rules.push({ pattern: phoneNumberPattern, message: phoneNumberValidationMessage });
               }
               if (field.type === 'email') {
                 rules.push({ type: 'email', message: 'Email chưa hợp lệ.' });
@@ -162,7 +171,12 @@ const RecordForm = ({ type, isCreateMode = false, selfService = false, profileId
 
               return (
                 <Col key={field.name} xs={24} md={field.wide ? 24 : 12}>
-                  <Form.Item label={field.label} name={field.name} rules={rules}>
+                  <Form.Item
+                    label={field.label}
+                    name={field.name}
+                    rules={rules}
+                    getValueFromEvent={field.type === 'number' ? (value) => value : undefined}
+                  >
                     {field.type === 'schoolYear' ? (
                       <Select options={getSchoolYears().map((schoolYear) => ({ value: schoolYear, label: schoolYear }))} />
                     ) : field.type === 'select' ? (
@@ -182,7 +196,7 @@ const RecordForm = ({ type, isCreateMode = false, selfService = false, profileId
                       <Input
                         type={field.type === 'email' ? 'email' : 'text'}
                         inputMode={field.type === 'phone' || field.type === 'year' ? 'numeric' : undefined}
-                        maxLength={field.name === 'id' ? 30 : 160}
+                        maxLength={field.type === 'phone' ? 10 : field.name === 'id' ? 30 : 160}
                         readOnly={selfService && field.name === 'id'
                           || (isCreateMode && field.readOnlyOnCreate)
                           || (type === 'classes' && field.name === 'schoolYear' && !isCreateMode)}

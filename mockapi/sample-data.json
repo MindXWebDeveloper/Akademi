@@ -1,0 +1,455 @@
+{
+  "SchoolYears": [
+    {
+      "schoolYearKey": "SY-2026-2027",
+      "name": "2026-2027",
+      "startDate": "2026-09-01",
+      "endDate": "2027-05-31",
+      "isCurrent": true,
+      "status": "active"
+    },
+    {
+      "schoolYearKey": "SY-2027-2028",
+      "name": "2027-2028",
+      "startDate": "2027-09-01",
+      "endDate": "2028-05-31",
+      "isCurrent": false,
+      "status": "planned"
+    }
+  ],
+  "Classes": [
+    {
+      "classKey": "CLS-10A1-2026-2027",
+      "name": "10A1",
+      "grade": "10",
+      "homeroomTeacher": "Nguyễn An Nhiên",
+      "room": "A101",
+      "schoolYear": "2026-2027",
+      "capacity": "40"
+    },
+    {
+      "classKey": "CLS-10A2-2026-2027",
+      "name": "10A2",
+      "grade": "10",
+      "homeroomTeacher": "Trần Minh Khoa",
+      "room": "A102",
+      "schoolYear": "2026-2027",
+      "capacity": "40"
+    },
+    {
+      "classKey": "CLS-11A1-2026-2027",
+      "name": "11A1",
+      "grade": "11",
+      "homeroomTeacher": "Lê Bảo Châu",
+      "room": "B101",
+      "schoolYear": "2026-2027",
+      "capacity": "38"
+    },
+    {
+      "classKey": "CLS-11A1-2027-2028",
+      "name": "11A1",
+      "grade": "11",
+      "homeroomTeacher": "Lê Bảo Châu",
+      "room": "B101",
+      "schoolYear": "2027-2028",
+      "capacity": "38"
+    }
+  ],
+  "Subjects": [
+    {
+      "subjectKey": "SUB-TOAN",
+      "name": "Toán",
+      "description": "Phát triển tư duy logic và năng lực giải quyết vấn đề.",
+      "gradeLevels": ["10", "11", "12"],
+      "isActive": true
+    },
+    {
+      "subjectKey": "SUB-NGUVAN",
+      "name": "Ngữ văn",
+      "description": "Rèn luyện năng lực đọc hiểu, viết và cảm thụ văn học.",
+      "gradeLevels": ["10", "11", "12"],
+      "isActive": true
+    },
+    {
+      "subjectKey": "SUB-TIENGANH",
+      "name": "Tiếng Anh",
+      "description": "Phát triển năng lực giao tiếp và sử dụng tiếng Anh.",
+      "gradeLevels": ["10", "11", "12"],
+      "isActive": true
+    }
+  ],
+  "Teachers": [
+    {
+      "teacherKey": "TCH-9000",
+      "name": "Nguyễn Minh An",
+      "gender": "Nam",
+      "birthYear": "1978",
+      "qualification": "Thạc sĩ",
+      "phone": "0000000000",
+      "email": "principal.demo@example.test",
+      "address": "Địa chỉ demo hiệu trưởng",
+      "position": "Hiệu trưởng"
+    },
+    {
+      "teacherKey": "TCH-9001",
+      "name": "Nguyễn An Nhiên",
+      "gender": "Nữ",
+      "birthYear": "1985",
+      "subjectKeys": ["SUB-TOAN"],
+      "qualification": "Thạc sĩ",
+      "phone": "0000000001",
+      "email": "nhien.teacher@example.test",
+      "address": "Địa chỉ mẫu 1"
+    },
+    {
+      "teacherKey": "TCH-9002",
+      "name": "Trần Minh Khoa",
+      "gender": "Nam",
+      "birthYear": "1982",
+      "subjectKeys": ["SUB-NGUVAN"],
+      "qualification": "Thạc sĩ",
+      "phone": "0000000002",
+      "email": "khoa.teacher@example.test",
+      "address": "Địa chỉ mẫu 2"
+    },
+    {
+      "teacherKey": "TCH-9003",
+      "name": "Lê Bảo Châu",
+      "gender": "Nữ",
+      "birthYear": "1990",
+      "subjectKeys": ["SUB-TIENGANH"],
+      "qualification": "Cử nhân",
+      "phone": "0000000003",
+      "email": "chau.teacher@example.test",
+      "address": "Địa chỉ mẫu 3"
+    }
+  ],
+  "Students": [
+    {
+      "studentKey": "STU-9001",
+      "name": "Phạm Minh Nhật",
+      "birthYear": "2010",
+      "hometown": "Hà Nội",
+      "gender": "Nam",
+      "ethnicity": "Kinh",
+      "address": "Địa chỉ mẫu học sinh 1",
+      "phone": "0000000011",
+      "email": "nhat.student@example.test",
+      "guardian": "Phụ huynh mẫu 1",
+      "status": "Đang học"
+    },
+    {
+      "studentKey": "STU-9002",
+      "name": "Đỗ Khánh Linh",
+      "birthYear": "2010",
+      "hometown": "Đà Nẵng",
+      "gender": "Nữ",
+      "ethnicity": "Kinh",
+      "address": "Địa chỉ mẫu học sinh 2",
+      "phone": "0000000012",
+      "email": "linh.student@example.test",
+      "guardian": "Phụ huynh mẫu 2",
+      "status": "Đang học"
+    },
+    {
+      "studentKey": "STU-9003",
+      "name": "Vũ Gia Hân",
+      "birthYear": "2009",
+      "hometown": "Huế",
+      "gender": "Nữ",
+      "ethnicity": "Kinh",
+      "address": "Địa chỉ mẫu học sinh 3",
+      "phone": "0000000013",
+      "email": "han.student@example.test",
+      "guardian": "Phụ huynh mẫu 3",
+      "status": "Đang học"
+    }
+  ],
+  "StudentEnrollments": [
+    {
+      "enrollmentKey": "ENR-STU-9001-SY-2026-2027",
+      "studentId": "STU-9001",
+      "schoolYear": "2026-2027",
+      "classId": "CLS-10A1-2026-2027",
+      "className": "10A1"
+    },
+    {
+      "enrollmentKey": "ENR-STU-9002-SY-2026-2027",
+      "studentId": "STU-9002",
+      "schoolYear": "2026-2027",
+      "classId": "CLS-10A1-2026-2027",
+      "className": "10A1"
+    },
+    {
+      "enrollmentKey": "ENR-STU-9003-SY-2026-2027",
+      "studentId": "STU-9003",
+      "schoolYear": "2026-2027",
+      "classId": "CLS-11A1-2026-2027",
+      "className": "11A1"
+    }
+  ],
+  "Grades": [
+    {
+      "gradeKey": "GRADE-CONFIG-TOAN-2026-2027-1",
+      "type": "config",
+      "key": "To%C3%A1n|2026-2027|1",
+      "subjectKey": "SUB-TOAN",
+      "subject": "Toán",
+      "schoolYear": "2026-2027",
+      "semester": "1",
+      "oralCount": 2,
+      "shortTestCount": 2,
+      "onePeriodCount": 1
+    },
+    {
+      "gradeKey": "GRADE-RECORD-STU-9001-TOAN-2026-2027-1",
+      "type": "record",
+      "key": "STU-9001|To%C3%A1n|2026-2027|1",
+      "subjectKey": "SUB-TOAN",
+      "studentId": "STU-9001",
+      "subject": "Toán",
+      "schoolYear": "2026-2027",
+      "semester": "1",
+      "oralScores": [8, 9],
+      "shortTestScores": [7, 8],
+      "onePeriodScores": [8],
+      "midtermScore": 8,
+      "finalScore": 9
+    },
+    {
+      "gradeKey": "GRADE-RECORD-STU-9002-TOAN-2026-2027-1",
+      "type": "record",
+      "key": "STU-9002|To%C3%A1n|2026-2027|1",
+      "subjectKey": "SUB-TOAN",
+      "studentId": "STU-9002",
+      "subject": "Toán",
+      "schoolYear": "2026-2027",
+      "semester": "1",
+      "oralScores": [7, 8],
+      "shortTestScores": [8, 8],
+      "onePeriodScores": [7],
+      "midtermScore": 8,
+      "finalScore": 8
+    }
+  ],
+  "StudentTranscripts": [
+    {
+      "transcriptKey": "TRANSCRIPT-STU-9001-SY-2026-2027",
+      "key": "STU-9001|2026-2027",
+      "studentId": "STU-9001",
+      "schoolYear": "2026-2027",
+      "academicLevel": "Khá",
+      "conduct": "Tốt",
+      "homeroomComment": "Có tinh thần học tập tốt."
+    }
+  ],
+  "Notices": [
+    {
+      "noticeKey": "NOTICE-9001",
+      "title": "Thông báo lịch sinh hoạt lớp mẫu",
+      "content": "Lớp 10A1 sinh hoạt tại phòng A101.",
+      "type": "general",
+      "important": false,
+      "startDate": "2026-09-01",
+      "endDate": "2027-05-31",
+      "createdAt": "2026-09-01T08:00:00.000Z",
+      "meetingRoom": "",
+      "recipient": ""
+    }
+  ],
+  "ExtracurricularActivities": [
+    {
+      "activityKey": "ACT-9001",
+      "title": "Ngày hội khoa học mẫu",
+      "location": "Sân trường",
+      "startAt": "2026-11-15T08:00",
+      "endAt": "2026-11-15T12:00",
+      "capacity": 30,
+      "registrationOpen": true,
+      "description": "Hoạt động trải nghiệm khoa học dành cho học sinh.",
+      "participants": {
+        "classes": [],
+        "students": [],
+        "teachers": [],
+        "staff": []
+      }
+    }
+  ],
+  "Books": [
+    {
+      "bookKey": "BOOK-9001",
+      "code": "DEMO-BOOK-001",
+      "title": "Khám phá thế giới tự nhiên",
+      "author": "Tác giả mẫu",
+      "category": "Khoa học",
+      "totalQuantity": 10
+    },
+    {
+      "bookKey": "BOOK-9002",
+      "code": "DEMO-BOOK-002",
+      "title": "Kỹ năng học tập hiệu quả",
+      "author": "Tác giả mẫu",
+      "category": "Kỹ năng",
+      "totalQuantity": 8
+    }
+  ],
+  "BookLoans": [
+    {
+      "loanKey": "LOAN-9001",
+      "bookId": "BOOK-9001",
+      "studentId": "STU-9001",
+      "studentName": "Phạm Minh Nhật",
+      "className": "10A1",
+      "quantity": 1,
+      "returnedQuantity": 0,
+      "borrowedAt": "2026-10-01T08:00:00.000Z",
+      "dueDate": "2026-10-15",
+      "returnedAt": null
+    }
+  ],
+  "TimetableLessons": [
+    {
+      "lessonKey": "LESSON-9001",
+      "schoolYear": "2026-2027",
+      "className": "10A1",
+      "teacherName": "Nguyễn An Nhiên",
+      "weekday": "monday",
+      "period": 1,
+      "subject": "Toán",
+      "room": "A101"
+    },
+    {
+      "lessonKey": "LESSON-9002",
+      "schoolYear": "2026-2027",
+      "className": "10A1",
+      "teacherName": "Trần Minh Khoa",
+      "weekday": "monday",
+      "period": 2,
+      "subject": "Ngữ văn",
+      "room": "A101"
+    },
+    {
+      "lessonKey": "LESSON-9003",
+      "schoolYear": "2026-2027",
+      "className": "11A1",
+      "teacherName": "Lê Bảo Châu",
+      "weekday": "tuesday",
+      "period": 1,
+      "subject": "Tiếng Anh",
+      "room": "B101"
+    }
+  ],
+  "TimetableSettings": [
+    {
+      "timetableSettingsKey": "TIMETABLE-SETTINGS-2026-2027",
+      "schoolYear": "2026-2027",
+      "periodCount": 10,
+      "morningPeriods": 5,
+      "morningStart": "07:30",
+      "afternoonStart": "13:30",
+      "periods": [
+        { "duration": 45, "breakAfter": 5 },
+        { "duration": 45, "breakAfter": 5 },
+        { "duration": 45, "breakAfter": 10 },
+        { "duration": 45, "breakAfter": 5 },
+        { "duration": 45, "breakAfter": 15 },
+        { "duration": 45, "breakAfter": 5 },
+        { "duration": 45, "breakAfter": 5 },
+        { "duration": 45, "breakAfter": 10 },
+        { "duration": 45, "breakAfter": 5 },
+        { "duration": 45, "breakAfter": 0 }
+      ]
+    }
+  ],
+  "ClassPromotionPlans": [
+    {
+      "promotionPlanKey": "PROMO-9001",
+      "sourceYear": "2026-2027",
+      "targetYear": "2027-2028",
+      "status": "pending",
+      "createdAt": "2027-05-01T08:00:00.000Z",
+      "rows": [
+        {
+          "studentId": "STU-9001",
+          "studentName": "Phạm Minh Nhật",
+          "studentStatus": "Đang học",
+          "sourceClassId": "CLS-10A1-2026-2027",
+          "sourceClassName": "10A1",
+          "action": "promote",
+          "targetClassKey": "CLS-11A1-2027-2028",
+          "suggestedClassName": "11A1",
+          "suggestedGrade": 11,
+          "targetCapacity": "40"
+        },
+        {
+          "studentId": "STU-9002",
+          "studentName": "Đỗ Khánh Linh",
+          "studentStatus": "Đang học",
+          "sourceClassId": "CLS-10A1-2026-2027",
+          "sourceClassName": "10A1",
+          "action": "promote",
+          "targetClassKey": "CLS-11A1-2027-2028",
+          "suggestedClassName": "11A1",
+          "suggestedGrade": 11,
+          "targetCapacity": "40"
+        },
+        {
+          "studentId": "STU-9003",
+          "studentName": "Vũ Gia Hân",
+          "studentStatus": "Đang học",
+          "sourceClassId": "CLS-11A1-2026-2027",
+          "sourceClassName": "11A1",
+          "action": "promote",
+          "targetClassKey": "new:12A1",
+          "suggestedClassName": "12A1",
+          "suggestedGrade": 12,
+          "targetCapacity": "38"
+        }
+      ]
+    }
+  ],
+  "Roles": [
+    {
+      "roleKey": "principal",
+      "name": "Ban Giám Hiệu",
+      "menuAccess": {
+        "students": "edit",
+        "class-promotions": "edit",
+        "teachers": "edit",
+        "classes": "edit",
+        "timetable": "edit",
+        "activities": "edit",
+        "notices": "edit",
+        "library": "edit"
+      }
+    },
+    {
+      "roleKey": "teacher",
+      "name": "Giáo viên",
+      "menuAccess": {
+        "students": "hide",
+        "class-promotions": "hide",
+        "teachers": "hide",
+        "classes": "hide",
+        "timetable": "read",
+        "activities": "hide",
+        "notices": "hide",
+        "library": "hide"
+      }
+    },
+    {
+      "roleKey": "student",
+      "name": "Học sinh",
+      "menuAccess": {
+        "students": "hide",
+        "class-promotions": "hide",
+        "teachers": "hide",
+        "classes": "hide",
+        "timetable": "read",
+        "activities": "hide",
+        "notices": "hide",
+        "library": "hide"
+      }
+    }
+  ]
+}

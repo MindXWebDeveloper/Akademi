@@ -20,6 +20,7 @@ import {
   updateResourceRecord,
 } from '../../data/apiClient';
 import { getAllSubjects } from '../../data/subjects';
+import { normalizeRecordName } from '../../data/recordValidation';
 
 const generateSubjectKey = () => {
   const highestNumber = getAllSubjects().reduce((highest, subject) => {
@@ -57,9 +58,9 @@ const SubjectManagement = () => {
 
   const saveSubject = async ({ name, description }) => {
     const normalizedName = name.trim();
-    const duplicate = subjects.some((subject) => (
+    const duplicate = getAllSubjects().some((subject) => (
       subject.id !== editingSubject?.id
-      && subject.name.toLocaleLowerCase('vi') === normalizedName.toLocaleLowerCase('vi')
+      && normalizeRecordName(subject.name) === normalizeRecordName(normalizedName)
     ));
     if (duplicate) {
       form.setFields([{ name: 'name', errors: ['Tên môn học đã tồn tại.'] }]);
