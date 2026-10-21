@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import {
   Alert,
   Button,
@@ -16,12 +16,14 @@ import { ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons';
 import { getStudents } from '../../../data/students';
 import { getSubjects } from '../../../data/subjects';
 import { getCurrentSchoolYear, getSchoolYears } from '../../../data/schoolYears';
+import { getTeacherTeachingAssignments } from '../../../data/timetable';
 import {
   completeGroupAverage,
   getGradeConfig,
   getGradeRecord,
   gradeWeights,
   saveGradeConfig,
+  saveTeacherGradeRecord,
   saveGradeRecord,
 } from '../../../data/grades';
 
@@ -58,6 +60,7 @@ const resizeScores = (scores, count) => (
 );
 
 const StudentGrades = () => {
+  const { user } = useOutletContext();
   const { studentId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -67,13 +70,28 @@ const StudentGrades = () => {
     ? requestedReturnTo
     : '/students';
   const goToList = () => navigate(returnTo, { replace: true });
-  const subjects = getSubjects().map((subject) => subject.name).sort((left, right) => left.localeCompare(right, 'vi'));
+  const allSubjects = getSubjects().map((item) => item.name).sort((left, right) => left.localeCompare(right, 'vi'));
   const schoolYears = getSchoolYears();
   const currentSchoolYear = getCurrentSchoolYear();
-  const [subject, setSubject] = useState(subjects[0] ?? '');
-  const [schoolYear, setSchoolYear] = useState(currentSchoolYear);
+  const isTeacher = user?.role === 'teacher';
+  const teacherAssignments = isTeacher
+    ? getTeacherTeachingAssignments(user.teacherKey, currentSchoolYear)
+    : [];
+  const [selectedSubject, setSelectedSubject] = useState(allSubjects[0] ?? '');
+  const [selectedSchoolYear, setSelectedSchoolYear] = useState(currentSchoolYear);
+  const schoolYear = isTeacher ? currentSchoolYear : selectedSchoolYear;
   const [semester, setSemester] = useState('1');
   const student = getStudents(schoolYear).find((item) => item.id === studentId);
+  const classAssignments = isTeacher
+    ? teacherAssignments.filter((assignment) => (
+      assignment.className.trim().toLocaleLowerCase('vi')
+      === student?.className?.trim().toLocaleLowerCase('vi')
+    ))
+    : [];
+  const subjects = isTeacher
+    ? [...new Set(classAssignments.map((assignment) => assignment.subject))]
+    : allSubjects;
+  const subject = subjects.includes(selectedSubject) ? selectedSubject : subjects[0] ?? '';
   const [gradeDrafts, setGradeDrafts] = useState({});
   const selectionKey = [studentId, subject, schoolYear, semester].join('|');
   const baseConfig = getGradeConfig(subject, schoolYear, semester);
@@ -117,19 +135,35 @@ const StudentGrades = () => {
   };
 
   const save = async () => {
-    const configResult = await saveGradeConfig(subject, schoolYear, semester, config);
-    if (!configResult.saved) {
-      message.error(`Không thể lưu cấu hình điểm.${configResult.error ? ` ${configResult.error.message}` : ''}`);
+    if (isTeacher && !classAssignments.some((assignment) => assignment.subject === subject)) {
+      message.error('Bạn chỉ được nhập điểm môn được phân công cho lớp này trong năm học hiện tại.');
       return;
     }
-    const recordResult = await saveGradeRecord(studentId, subject, schoolYear, semester, record);
+
+    if (!isTeacher) {
+      const configResult = await saveGradeConfig(subject, schoolYear, semester, config);
+      if (!configResult.saved) {
+        message.error(`Không thể lưu cấu hình điểm.${configResult.error ? ` ${configResult.error.message}` : ''}`);
+        return;
+      }
+    }
+    const recordResult = isTeacher
+      ? await saveTeacherGradeRecord(user.teacherKey, studentId, subject, semester, record)
+      : await saveGradeRecord(studentId, subject, schoolYear, semester, record);
 
     if (!recordResult.saved) {
-      message.error(`Cấu hình đã lưu nhưng điểm số chưa lưu.${recordResult.error ? ` ${recordResult.error.message}` : ''}`);
+      const reason = recordResult.reason === 'teacher-not-assigned'
+        ? 'Bạn chỉ được nhập điểm môn được phân công cho lớp này trong năm học hiện tại.'
+        : recordResult.reason === 'student-not-enrolled'
+          ? 'Học sinh không có thông tin lớp trong năm học hiện tại.'
+          : isTeacher
+            ? 'Không thể lưu điểm số.'
+            : 'Cấu hình đã lưu nhưng điểm số chưa lưu.';
+      message.error(`${reason}${recordResult.error ? ` ${recordResult.error.message}` : ''}`);
       return;
     }
 
-    message.success('Đã lưu cấu hình và điểm số.');
+    message.success(isTeacher ? 'Đã lưu điểm số.' : 'Đã lưu cấu hình và điểm số.');
   };
 
   const numberOfTestColumns = Math.max(
@@ -216,8 +250,24 @@ const StudentGrades = () => {
         <Alert
           type="warning"
           showIcon
-          message="Không tìm thấy học sinh"
-          description={`Mã học sinh ${studentId} không tồn tại trong danh sách.`}
+          message={isTeacher ? 'Học sinh không thuộc năm học hiện tại' : 'Không tìm thấy học sinh'}
+          description={isTeacher
+            ? 'Giáo viên chỉ được nhập điểm cho học sinh có lớp trong năm học hiện tại.'
+            : `Mã học sinh ${studentId} không tồn tại trong danh sách.`}
+          action={<Button onClick={goToList}>Về danh sách</Button>}
+        />
+      </Card>
+    );
+  }
+
+  if (isTeacher && !subjects.length) {
+    return (
+      <Card>
+        <Alert
+          type="warning"
+          showIcon
+          message="Không được phân công nhập điểm cho học sinh này"
+          description="Chỉ được nhập điểm cho lớp có tiết học của bạn trong năm học hiện tại, theo môn được phân công."
           action={<Button onClick={goToList}>Về danh sách</Button>}
         />
       </Card>
@@ -248,21 +298,28 @@ const StudentGrades = () => {
             <Typography.Text strong style={{ display: 'block', marginBottom: 8 }}>Môn học</Typography.Text>
             <Select
               value={subject || undefined}
-              onChange={setSubject}
+              onChange={setSelectedSubject}
               options={subjects.map((item) => ({ value: item, label: item }))}
               placeholder="Chọn môn học"
               style={{ width: 220 }}
             />
           </div>
-          <div>
-            <Typography.Text strong style={{ display: 'block', marginBottom: 8 }}>Năm học</Typography.Text>
-            <Select
-              value={schoolYear}
-              onChange={setSchoolYear}
-              options={schoolYears.map((item) => ({ value: item, label: item }))}
-              style={{ width: 180 }}
-            />
-          </div>
+          {isTeacher ? (
+            <div>
+              <Typography.Text strong style={{ display: 'block', marginBottom: 8 }}>Năm học</Typography.Text>
+              <Typography.Text>{currentSchoolYear}</Typography.Text>
+            </div>
+          ) : (
+            <div>
+              <Typography.Text strong style={{ display: 'block', marginBottom: 8 }}>Năm học</Typography.Text>
+              <Select
+                value={schoolYear}
+                onChange={setSelectedSchoolYear}
+                options={schoolYears.map((item) => ({ value: item, label: item }))}
+                style={{ width: 180 }}
+              />
+            </div>
+          )}
           <div>
             <Typography.Text strong style={{ display: 'block', marginBottom: 8 }}>Học kỳ</Typography.Text>
             <Select
@@ -279,7 +336,7 @@ const StudentGrades = () => {
         <Card><Empty description="Chưa có môn học. Hãy thêm môn giảng dạy trong hồ sơ giáo viên trước." /></Card>
       ) : (
         <>
-          <Card title="Cấu hình bài kiểm tra và hệ số" style={{ marginBottom: 24 }} styles={{ body: { padding: 0 } }}>
+          {!isTeacher && <Card title="Cấu hình bài kiểm tra và hệ số" style={{ marginBottom: 24 }} styles={{ body: { padding: 0 } }}>
             <Table
               rowKey="key"
               pagination={false}
@@ -306,7 +363,7 @@ const StudentGrades = () => {
               ]}
               scroll={{ x: 500 }}
             />
-          </Card>
+          </Card>}
 
           <Card
             title="Bảng điểm"

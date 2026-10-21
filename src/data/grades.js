@@ -3,7 +3,10 @@ import {
   getResourceRecords,
   updateResourceRecord,
 } from './apiClient';
+import { getStudentById } from './students';
 import { getSubjectByName } from './subjects';
+import { getCurrentSchoolYear } from './schoolYears';
+import { getTeacherTeachingAssignments } from './timetable';
 
 export const gradeWeights = {
   oralScores: 1,
@@ -117,6 +120,21 @@ export const saveGradeRecord = async (studentId, subject, schoolYear, semester, 
   } catch (error) {
     return { saved: false, reason: 'api', error };
   }
+};
+
+export const saveTeacherGradeRecord = async (teacherKey, studentId, subject, semester, record) => {
+  const schoolYear = getCurrentSchoolYear();
+  const student = getStudentById(studentId, schoolYear);
+  if (!student) return { saved: false, reason: 'student-not-enrolled' };
+
+  const isAssigned = getTeacherTeachingAssignments(teacherKey, schoolYear).some((assignment) => (
+    assignment.className.trim().toLocaleLowerCase('vi')
+      === student.className.trim().toLocaleLowerCase('vi')
+    && assignment.subject === subject
+  ));
+  if (!isAssigned) return { saved: false, reason: 'teacher-not-assigned' };
+
+  return saveGradeRecord(studentId, subject, schoolYear, semester, record);
 };
 
 export const getStudentTranscript = (studentId, schoolYear) => {

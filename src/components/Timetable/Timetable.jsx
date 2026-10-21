@@ -124,12 +124,21 @@ const Timetable = () => {
       if (key && !uniqueTeachers.has(key)) uniqueTeachers.set(key, teacher);
     });
   const timetableTeachers = [...uniqueTeachers.values()];
-  const subjectOptions = getSubjects().map((subject) => ({ value: subject.name, label: subject.name }));
+  const subjects = getSubjects();
+  const selectedSubject = Form.useWatch('subject', form);
+  const selectedSubjectId = subjects.find((subject) => subject.name === selectedSubject)?.id;
+  const subjectOptions = subjects.map((subject) => ({ value: subject.name, label: subject.name }));
   const classOptions = classes.map((item) => ({ value: item.name, label: item.name }));
   const teacherOptions = timetableTeachers.map((item) => ({
     value: item.name,
     label: `${item.name} (${item.teacherKey ?? item.id})`,
   }));
+  const subjectTeacherOptions = timetableTeachers
+    .filter((teacher) => selectedSubjectId && teacher.subjectKeys.includes(selectedSubjectId))
+    .map((item) => ({
+      value: item.name,
+      label: `${item.name} (${item.teacherKey ?? item.id})`,
+    }));
   const options = viewMode === 'class'
     ? classOptions
     : teacherOptions;
@@ -421,15 +430,28 @@ const Timetable = () => {
         cancelText="Hủy"
         destroyOnHidden
       >
-        <Form form={form} layout="vertical" onFinish={handleSaveLesson}>
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSaveLesson}
+          onValuesChange={(changedValues) => {
+            if (Object.hasOwn(changedValues, 'subject')) form.setFieldValue('teacherName', undefined);
+          }}
+        >
           <Form.Item name="className" label="Lớp học" rules={[{ required: true, message: 'Chọn lớp học.' }]}>
             <Select options={classOptions} showSearch optionFilterProp="label" placeholder="Chọn lớp" />
           </Form.Item>
-          <Form.Item name="teacherName" label="Giáo viên" rules={[{ required: true, message: 'Chọn giáo viên.' }]}>
-            <Select options={teacherOptions} showSearch optionFilterProp="label" placeholder="Chọn giáo viên" />
-          </Form.Item>
           <Form.Item name="subject" label="Môn học" rules={[{ required: true, message: 'Chọn môn học.' }]}>
             <Select options={subjectOptions} showSearch optionFilterProp="label" placeholder="Chọn môn học" />
+          </Form.Item>
+          <Form.Item name="teacherName" label="Giáo viên" rules={[{ required: true, message: 'Chọn giáo viên.' }]}>
+            <Select
+              options={subjectTeacherOptions}
+              showSearch
+              optionFilterProp="label"
+              placeholder={selectedSubject ? 'Chọn giáo viên môn học này' : 'Chọn môn học trước'}
+              disabled={!selectedSubject}
+            />
           </Form.Item>
           <Form.Item name="room" label="Phòng học" rules={[{ required: true, whitespace: true, message: 'Nhập phòng học.' }]}>
             <Input maxLength={40} />

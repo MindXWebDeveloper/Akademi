@@ -3,6 +3,7 @@ import {
   getResourceRecords,
   updateResourceRecord,
 } from './apiClient';
+import { getTeacherSubjectKeys, getSubjects } from './subjects';
 import { getCurrentSchoolYear } from './schoolYears';
 
 const defaultSettings = {
@@ -55,6 +56,37 @@ export const saveTimetableSettings = async (settings, schoolYear = getCurrentSch
 export const getLessons = (schoolYear = getCurrentSchoolYear()) => (
   lessons().filter((lesson) => lesson.schoolYear === schoolYear)
 );
+
+const normalizeAssignmentValue = (value) => String(value ?? '').trim().toLocaleLowerCase('vi');
+
+export const getTeacherTeachingAssignments = (teacherKey, schoolYear = getCurrentSchoolYear()) => {
+  if (!teacherKey || !schoolYear) return [];
+  const teacher = getResourceRecords('teachers').find((record) => (
+    String(record.teacherKey ?? record._id ?? record.id ?? '') === String(teacherKey)
+  ));
+  if (!teacher?.name) return [];
+
+  const subjectIds = new Set(getTeacherSubjectKeys(teacherKey));
+  const subjectsByName = new Map(getSubjects().map((subject) => [
+    normalizeAssignmentValue(subject.name),
+    subject,
+  ]));
+  const assignments = new Map();
+  getLessons(schoolYear)
+    .filter((lesson) => (
+      normalizeAssignmentValue(lesson.teacherName) === normalizeAssignmentValue(teacher.name)
+    ))
+    .forEach((lesson) => {
+      const subject = subjectsByName.get(normalizeAssignmentValue(lesson.subject));
+      const className = String(lesson.className ?? '').trim();
+      if (!subject || !subjectIds.has(subject.id) || !className) return;
+      assignments.set(`${normalizeAssignmentValue(className)}|${subject.id}`, {
+        className,
+        subject: subject.name,
+      });
+    });
+  return [...assignments.values()];
+};
 
 const hasConflict = (allLessons, lesson, ignoredId) => allLessons.some((existing) => (
   existing.id !== ignoredId
